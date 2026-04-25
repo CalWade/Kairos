@@ -107,6 +107,7 @@ memoryops recall "我们为什么不用 MongoDB？" --evidence
 memoryops history <atom_id>
 memoryops remind --now 2026-05-30
 memoryops eval --smoke
+memoryops schema:check
 
 # Agent-friendly 命令
 memoryops atom.add
@@ -158,13 +159,13 @@ memoryops/
 - [x] 白皮书目录初稿
 - [x] OpenClaw Skill 草案
 - [x] CLI skeleton
-- [ ] MemoryAtom schema 实现
+- [x] MemoryAtom schema 实现
 - [ ] SQLite Store + JSONL Event Log
 - [ ] 两阶段 Extract / Reconcile
 - [ ] 飞书文档 / 群聊读入 POC
 - [ ] 冲突更新
 - [ ] fast-forward 遗忘提醒
-- [ ] smoke benchmark
+- [x] smoke benchmark 数据集草案
 - [ ] Demo 录屏
 
 ## 设计参考

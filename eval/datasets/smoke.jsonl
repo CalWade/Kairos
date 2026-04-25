@@ -1,0 +1,5 @@
+{"id":"decision_recall_001","category":"anti_interference","input":["A：我们用 PostgreSQL 还是 MongoDB？","B：MongoDB 查询灵活。","C：但我们的数据强关系，事务要求高。","A：最终决定使用 PostgreSQL，不使用 MongoDB，原因是事务一致性和 SQL 分析能力更好。"],"query":"我们为什么不用 MongoDB？","expected":"使用 PostgreSQL；原因包含事务一致性和 SQL 分析能力；应引用原始讨论证据。"}
+{"id":"conflict_update_001","category":"conflict_update","input":["以后周报每周五发给 Alice。","不对，周报以后发给 Bob，Alice 不再负责这个了。"],"query":"周报发给谁？","expected":"Bob；Alice 版本应被标记为 superseded 或 invalid。"}
+{"id":"forgetting_001","category":"forgetting_fast_forward","input":["生产环境 API Key 已在 4 月 25 日更新，新 key 只允许服务端使用，不允许前端直连。"],"query":"fast-forward 到 4 月 30 日后是否需要提醒？","expected":"应触发高风险事项复习提醒。"}
+{"id":"deadline_001","category":"deadline","input":["复赛材料需要在 5 月 7 日前提交，包括 Demo 录屏、项目链接和个人阶段成果小结。"],"query":"复赛材料什么时候提交，需要哪些东西？","expected":"5 月 7 日前；包含 Demo 录屏、项目链接、个人阶段成果小结。"}
+{"id":"cli_command_001","category":"cli_command","input":["这个项目本地开发时使用 npm run dev -- --help 查看 CLI，提交前运行 npm run build。"],"query":"这个项目本地开发和提交前分别用什么命令？","expected":"开发使用 npm run dev -- --help；提交前运行 npm run build。"}
