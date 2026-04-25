@@ -1,0 +1,28 @@
+{
+  "name": "memoryops",
+  "version": "0.1.0",
+  "description": "Enterprise long-term collaborative memory engine for Feishu and OpenClaw",
+  "type": "module",
+  "bin": {
+    "memoryops": "./dist/cli.js"
+  },
+  "scripts": {
+    "dev": "tsx src/cli.ts",
+    "build": "tsc",
+    "test": "vitest",
+    "eval:smoke": "tsx src/cli.ts eval --smoke"
+  },
+  "keywords": ["memory", "agent", "feishu", "openclaw", "lark"],
+  "author": "Calvin Wei <CalvinvWei@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
+  },
+  "dependencies": {
+    "commander": "latest",
+    "zod": "latest"
+  }
+}
