@@ -1,4 +1,4 @@
-# MemoryOps
+# Kairos
 
 ![Node.js](https://img.shields.io/badge/Node.js-22%2B-339933?logo=node.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5%2B-3178C6?logo=typescript&logoColor=white)
@@ -9,7 +9,7 @@
 
 > 面向飞书与 OpenClaw 的企业级长程协作记忆引擎。
 
-> 说明：本项目使用 **MemoryOps** 作为正式项目名，避免与 Mem0 旗下 OpenMemory 项目产生命名混淆。当前 GitHub 仓库名如仍显示 `openmemory-feishu`，后续建议改名为 `memoryops`。
+> **Kairos** 是项目对外名称，寓意“关键时刻 / 恰当时机”。它强调企业记忆不只是被动存储，而是在正确的时间召回正确的上下文。代码中的 `memoryops` 保留为 CLI 与内部引擎名称。
 
 MemoryOps 是一个针对飞书 AI 校园挑战赛 OpenClaw Memory 赛道设计的企业协作记忆系统。它的目标不是做一个简单的聊天记录搜索工具，也不是泛泛的飞书 AI 助手，而是把飞书协作流中的碎片化信息沉淀为可管理、可检索、可更新、可遗忘、可评测的企业长期记忆。
 
@@ -27,15 +27,15 @@ AI Agent 在企业协作中经常“失忆”：
 
 ## 一句话定位
 
-> MemoryOps 将飞书群聊、文档、任务、日程和 CLI 操作中的协作信息，转化为结构化的 MemoryAtom，并通过冲突更新、遗忘提醒和 Benchmark 证明长期记忆的实际价值。
+> Kairos / MemoryOps 将飞书群聊、文档、任务、日程和 CLI 操作中的协作信息，转化为结构化的 MemoryAtom，并通过冲突更新、遗忘提醒和 Benchmark 证明长期记忆的实际价值。
 
 ## Quick Start（当前 WIP）
 
 当前阶段已经可以运行 CLI 骨架、MemoryAtom Schema 校验和 smoke benchmark 数据集加载。
 
 ```bash
-git clone git@github.com:CalWade/openmemory-feishu.git
-cd openmemory-feishu
+git clone git@github.com:CalWade/Kairos.git
+cd Kairos
 npm install
 
 # 查看 CLI 命令
