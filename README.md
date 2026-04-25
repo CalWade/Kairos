@@ -1,6 +1,15 @@
-# MemoryOps / OpenMemory Feishu
+# MemoryOps
+
+![Node.js](https://img.shields.io/badge/Node.js-22%2B-339933?logo=node.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5%2B-3178C6?logo=typescript&logoColor=white)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Status](https://img.shields.io/badge/status-WIP-orange)
+![Feishu](https://img.shields.io/badge/Feishu%20%2F%20Lark-Memory-blue)
+![OpenClaw](https://img.shields.io/badge/OpenClaw-Agent--Friendly-purple)
 
 > 面向飞书与 OpenClaw 的企业级长程协作记忆引擎。
+
+> 说明：本项目使用 **MemoryOps** 作为正式项目名，避免与 Mem0 旗下 OpenMemory 项目产生命名混淆。当前 GitHub 仓库名如仍显示 `openmemory-feishu`，后续建议改名为 `memoryops`。
 
 MemoryOps 是一个针对飞书 AI 校园挑战赛 OpenClaw Memory 赛道设计的企业协作记忆系统。它的目标不是做一个简单的聊天记录搜索工具，也不是泛泛的飞书 AI 助手，而是把飞书协作流中的碎片化信息沉淀为可管理、可检索、可更新、可遗忘、可评测的企业长期记忆。
 
@@ -20,22 +29,56 @@ AI Agent 在企业协作中经常“失忆”：
 
 > MemoryOps 将飞书群聊、文档、任务、日程和 CLI 操作中的协作信息，转化为结构化的 MemoryAtom，并通过冲突更新、遗忘提醒和 Benchmark 证明长期记忆的实际价值。
 
+## Quick Start（当前 WIP）
+
+当前阶段已经可以运行 CLI 骨架、MemoryAtom Schema 校验和 smoke benchmark 数据集加载。
+
+```bash
+git clone git@github.com:CalWade/openmemory-feishu.git
+cd openmemory-feishu
+npm install
+
+# 查看 CLI 命令
+npm run dev -- --help
+
+# 校验 MemoryAtom 示例是否符合 Zod Schema
+npm run dev -- schema:check
+
+# 加载 smoke benchmark 数据集
+npm run dev -- eval --smoke
+
+# 当前 add / recall 仍是 dry-run mock
+npm run dev -- add --text "最终决定使用 PostgreSQL，不使用 MongoDB"
+npm run dev -- recall "我们为什么不用 MongoDB？" --evidence
+```
+
+> 注意：Day 1 阶段 `add / recall` 仍是 dry-run mock，下一阶段会接入 SQLite Store 与 JSONL Event Log。
+
 ## 核心设计
 
-```text
-飞书 / CLI / OpenClaw 输入
-        ↓
-Stage 1: Extract Candidate Facts
-        ↓
-Retrieve Similar Memories
-        ↓
-Stage 2: Reconcile Memory Events
-        ↓
-MemoryAtom Store + Event Log
-        ↓
-Recall / Search / Remind / Benchmark
-        ↓
-OpenClaw / CLI / 飞书端交互
+```mermaid
+flowchart TD
+    A[飞书群聊 / 文档 / 任务 / 日程] --> B[Ingestion 数据读入]
+    A2[CLI 操作 / OpenClaw 对话] --> B
+    B --> C[Stage 1: Extract Candidate Facts]
+    C --> D[Retrieve Similar Memories]
+    D --> E[Stage 2: Reconcile Memory Events]
+    E --> F{Action 决策}
+    F -->|ADD| G[新增 MemoryAtom]
+    F -->|UPDATE| H[更新 MemoryAtom]
+    F -->|SUPERSEDE| I[非损失效: 标记旧记忆失效]
+    F -->|CONFLICT| J[conflict_pending 等待确认]
+    F -->|DUPLICATE / NONE| K[丢弃或忽略]
+    G --> L[(Memory Store)]
+    H --> L
+    I --> L
+    J --> L
+    L --> M[Recall / Search]
+    L --> N[Remind / Forgetting]
+    L --> O[Benchmark / Report]
+    M --> P[OpenClaw / CLI / 飞书端回答]
+    N --> P
+    O --> Q[自证价值]
 ```
 
 ## 关键能力
