@@ -1,7 +1,7 @@
 {
   "name": "memoryops",
   "version": "0.1.0",
-  "description": "Enterprise long-term collaborative memory engine for Feishu and OpenClaw",
+  "description": "Kairos: Enterprise long-term collaborative memory engine for Feishu and OpenClaw",
   "type": "module",
   "bin": {
     "memoryops": "./dist/cli.js"
