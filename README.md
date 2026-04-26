@@ -48,11 +48,12 @@ npm run dev -- schema:check
 npm run dev -- eval --smoke
 
 # 当前 add / recall 仍是 dry-run mock
-npm run dev -- add --text "最终决定使用 PostgreSQL，不使用 MongoDB"
-npm run dev -- recall "我们为什么不用 MongoDB？" --evidence
+npm run dev -- add --text "最终决定使用 PostgreSQL，不使用 MongoDB" --project kairos --type decision --subject database_selection
+npm run dev -- search "PostgreSQL" --project kairos
+npm run dev -- recall "我们为什么不用 MongoDB？" --project kairos --evidence
 ```
 
-> 注意：Day 1 阶段 `add / recall` 仍是 dry-run mock，下一阶段会接入 SQLite Store 与 JSONL Event Log。
+> 注意：当前 `add / search / recall / list / history` 已接入本地 SQLite Store 与 JSONL Event Log；LLM 两阶段抽取仍在开发中。
 
 ## 核心设计
 
@@ -205,7 +206,7 @@ memoryops/
 - [x] OpenClaw Skill 草案
 - [x] CLI skeleton
 - [x] MemoryAtom schema 实现
-- [ ] SQLite Store + JSONL Event Log
+- [x] SQLite Store + JSONL Event Log
 - [ ] 两阶段 Extract / Reconcile
 - [ ] 飞书文档 / 群聊读入 POC
 - [ ] 冲突更新

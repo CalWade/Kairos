@@ -12,7 +12,13 @@
     "test": "vitest",
     "eval:smoke": "tsx src/cli.ts eval --smoke"
   },
-  "keywords": ["memory", "agent", "feishu", "openclaw", "lark"],
+  "keywords": [
+    "memory",
+    "agent",
+    "feishu",
+    "openclaw",
+    "lark"
+  ],
   "author": "Calvin Wei <CalvinvWei@gmail.com>",
   "license": "MIT",
   "devDependencies": {
@@ -22,6 +28,8 @@
     "vitest": "latest"
   },
   "dependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "better-sqlite3": "^12.9.0",
     "commander": "latest",
     "zod": "latest"
   }
