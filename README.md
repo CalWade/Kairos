@@ -51,6 +51,10 @@ npm run dev -- eval --smoke
 npm run dev -- add --text "最终决定使用 PostgreSQL，不使用 MongoDB" --project kairos --type decision --subject database_selection
 npm run dev -- search "PostgreSQL" --project kairos
 npm run dev -- recall "我们为什么不用 MongoDB？" --project kairos --evidence
+
+# 摄取文件并触发 mock 冲突覆盖
+npm run dev -- ingest --file examples/weekly-report-conflict.md --project kairos
+npm run dev -- search "周报" --project kairos --include-history
 ```
 
 > 注意：当前 `add / search / recall / list / history` 已接入本地 SQLite Store 与 JSONL Event Log；LLM 两阶段抽取仍在开发中。
@@ -207,9 +211,9 @@ memoryops/
 - [x] CLI skeleton
 - [x] MemoryAtom schema 实现
 - [x] SQLite Store + JSONL Event Log
-- [ ] 两阶段 Extract / Reconcile
+- [x] mock Extract / Reconcile 骨架
 - [ ] 飞书文档 / 群聊读入 POC
-- [ ] 冲突更新
+- [x] 冲突更新
 - [ ] fast-forward 遗忘提醒
 - [x] smoke benchmark 数据集草案
 - [ ] Demo 录屏

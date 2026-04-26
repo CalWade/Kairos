@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { Command } from "commander";
+import { readFileSync } from "node:fs";
 import { MemoryAtomSchema } from "./memory/schema.js";
 import { createManualMemory } from "./memory/factory.js";
 import { MemoryStore } from "./memory/store.js";
@@ -21,26 +22,39 @@ function storeFromOptions(opts: { db?: string; events?: string }) {
 program
   .command("ingest")
   .description("通过 mock extractor/reconciler 摄取文本，自动 ADD 或 SUPERSEDE")
-  .requiredOption("--text <text>", "要摄取的原始文本")
+  .option("--text <text>", "要摄取的原始文本")
+  .option("--file <path>", "从文件读取文本，每个非空行作为一条输入")
   .option("--project <project>", "项目名")
   .option("--db <path>", "SQLite 数据库路径")
   .option("--events <path>", "JSONL event log 路径")
   .action((opts) => {
+    if (!opts.text && !opts.file) {
+      throw new Error("请提供 --text 或 --file");
+    }
+    const inputs: string[] = [];
+    if (opts.text) inputs.push(opts.text);
+    if (opts.file) {
+      const fileText = readFileSync(opts.file, "utf8");
+      inputs.push(...fileText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean));
+    }
+
     const store = storeFromOptions(opts);
-    const facts = extractFacts(opts.text, { project: opts.project });
-    const results = facts.map((fact) => {
-      const atom = createAtomFromFact(fact);
-      const candidates = store.findConflictCandidates(atom);
-      const decision = reconcileFact(fact, candidates);
-      if (decision.action === "SUPERSEDE" && decision.target_id) {
-        const saved = store.supersede(decision.target_id, atom, decision.relation ?? "DIRECT_CONFLICT");
-        return { fact, decision, saved };
-      }
-      if (decision.action === "DUPLICATE" || decision.action === "NONE") {
-        return { fact, decision, saved: null };
-      }
-      const saved = store.upsert(atom);
-      return { fact, decision, saved };
+    const results = inputs.flatMap((input) => {
+      const facts = extractFacts(input, { project: opts.project });
+      return facts.map((fact) => {
+        const atom = createAtomFromFact(fact);
+        const candidates = store.findConflictCandidates(atom);
+        const decision = reconcileFact(fact, candidates);
+        if (decision.action === "SUPERSEDE" && decision.target_id) {
+          const saved = store.supersede(decision.target_id, atom, decision.relation ?? "DIRECT_CONFLICT");
+          return { input, fact, decision, saved };
+        }
+        if (decision.action === "DUPLICATE" || decision.action === "NONE") {
+          return { input, fact, decision, saved: null };
+        }
+        const saved = store.upsert(atom);
+        return { input, fact, decision, saved };
+      });
     });
     console.log(JSON.stringify({ ok: true, command: "ingest", total: results.length, results }, null, 2));
   });
