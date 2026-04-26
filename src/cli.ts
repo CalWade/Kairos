@@ -4,6 +4,7 @@ import { MemoryAtomSchema } from "./memory/schema.js";
 import { createManualMemory } from "./memory/factory.js";
 import { MemoryStore } from "./memory/store.js";
 import { loadSmokeCases, summarizeSmokeCases } from "./eval/smoke.js";
+import { createAtomFromFact, extractFacts, reconcileFact } from "./extractor/mockExtractor.js";
 
 const program = new Command();
 
@@ -15,6 +16,34 @@ program
 function storeFromOptions(opts: { db?: string; events?: string }) {
   return new MemoryStore(opts.db ?? "data/memory.db", opts.events ?? "data/memory_events.jsonl");
 }
+
+
+program
+  .command("ingest")
+  .description("通过 mock extractor/reconciler 摄取文本，自动 ADD 或 SUPERSEDE")
+  .requiredOption("--text <text>", "要摄取的原始文本")
+  .option("--project <project>", "项目名")
+  .option("--db <path>", "SQLite 数据库路径")
+  .option("--events <path>", "JSONL event log 路径")
+  .action((opts) => {
+    const store = storeFromOptions(opts);
+    const facts = extractFacts(opts.text, { project: opts.project });
+    const results = facts.map((fact) => {
+      const atom = createAtomFromFact(fact);
+      const candidates = store.findConflictCandidates(atom);
+      const decision = reconcileFact(fact, candidates);
+      if (decision.action === "SUPERSEDE" && decision.target_id) {
+        const saved = store.supersede(decision.target_id, atom, decision.relation ?? "DIRECT_CONFLICT");
+        return { fact, decision, saved };
+      }
+      if (decision.action === "DUPLICATE" || decision.action === "NONE") {
+        return { fact, decision, saved: null };
+      }
+      const saved = store.upsert(atom);
+      return { fact, decision, saved };
+    });
+    console.log(JSON.stringify({ ok: true, command: "ingest", total: results.length, results }, null, 2));
+  });
 
 program
   .command("add")

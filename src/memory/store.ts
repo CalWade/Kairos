@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import type { MemoryAtom } from "./atom.js";
+import type { ConflictRelation, MemoryAtom } from "./atom.js";
 import { MemoryAtomSchema } from "./schema.js";
 import { EventLog } from "./eventLog.js";
 import { makeMemoryId } from "./id.js";
@@ -62,57 +62,58 @@ export class MemoryStore {
     `);
   }
 
-  upsert(atom: MemoryAtom) {
+  private writeAtom(atom: MemoryAtom) {
     const parsed = MemoryAtomSchema.parse(atom);
     const tags = parsed.tags.join(" ");
-    const tx = this.db.transaction(() => {
-      this.db.prepare(`
-        INSERT INTO memories (
-          id, type, scope, project, layer, formation, subject, content, status,
-          confidence, importance, created_at, observed_at, valid_at, invalid_at,
-          expired_at, decay_policy, review_at, access_count, last_accessed_at, atom_json
-        ) VALUES (
-          @id, @type, @scope, @project, @layer, @formation, @subject, @content, @status,
-          @confidence, @importance, @created_at, @observed_at, @valid_at, @invalid_at,
-          @expired_at, @decay_policy, @review_at, @access_count, @last_accessed_at, @atom_json
-        )
-        ON CONFLICT(id) DO UPDATE SET
-          type=excluded.type,
-          scope=excluded.scope,
-          project=excluded.project,
-          layer=excluded.layer,
-          formation=excluded.formation,
-          subject=excluded.subject,
-          content=excluded.content,
-          status=excluded.status,
-          confidence=excluded.confidence,
-          importance=excluded.importance,
-          created_at=excluded.created_at,
-          observed_at=excluded.observed_at,
-          valid_at=excluded.valid_at,
-          invalid_at=excluded.invalid_at,
-          expired_at=excluded.expired_at,
-          decay_policy=excluded.decay_policy,
-          review_at=excluded.review_at,
-          access_count=excluded.access_count,
-          last_accessed_at=excluded.last_accessed_at,
-          atom_json=excluded.atom_json
-      `).run({
-        ...parsed,
-        project: parsed.project ?? null,
-        invalid_at: parsed.invalid_at ?? null,
-        expired_at: parsed.expired_at ?? null,
-        review_at: parsed.review_at ?? null,
-        last_accessed_at: parsed.last_accessed_at ?? null,
-        atom_json: JSON.stringify(parsed),
-      });
-
-      this.db.prepare(`DELETE FROM memories_fts WHERE id = ?`).run(parsed.id);
-      this.db.prepare(`INSERT INTO memories_fts(id, subject, content, tags) VALUES (?, ?, ?, ?)`)
-        .run(parsed.id, parsed.subject, parsed.content, tags);
+    this.db.prepare(`
+      INSERT INTO memories (
+        id, type, scope, project, layer, formation, subject, content, status,
+        confidence, importance, created_at, observed_at, valid_at, invalid_at,
+        expired_at, decay_policy, review_at, access_count, last_accessed_at, atom_json
+      ) VALUES (
+        @id, @type, @scope, @project, @layer, @formation, @subject, @content, @status,
+        @confidence, @importance, @created_at, @observed_at, @valid_at, @invalid_at,
+        @expired_at, @decay_policy, @review_at, @access_count, @last_accessed_at, @atom_json
+      )
+      ON CONFLICT(id) DO UPDATE SET
+        type=excluded.type,
+        scope=excluded.scope,
+        project=excluded.project,
+        layer=excluded.layer,
+        formation=excluded.formation,
+        subject=excluded.subject,
+        content=excluded.content,
+        status=excluded.status,
+        confidence=excluded.confidence,
+        importance=excluded.importance,
+        created_at=excluded.created_at,
+        observed_at=excluded.observed_at,
+        valid_at=excluded.valid_at,
+        invalid_at=excluded.invalid_at,
+        expired_at=excluded.expired_at,
+        decay_policy=excluded.decay_policy,
+        review_at=excluded.review_at,
+        access_count=excluded.access_count,
+        last_accessed_at=excluded.last_accessed_at,
+        atom_json=excluded.atom_json
+    `).run({
+      ...parsed,
+      project: parsed.project ?? null,
+      invalid_at: parsed.invalid_at ?? null,
+      expired_at: parsed.expired_at ?? null,
+      review_at: parsed.review_at ?? null,
+      last_accessed_at: parsed.last_accessed_at ?? null,
+      atom_json: JSON.stringify(parsed),
     });
-    tx();
 
+    this.db.prepare(`DELETE FROM memories_fts WHERE id = ?`).run(parsed.id);
+    this.db.prepare(`INSERT INTO memories_fts(id, subject, content, tags) VALUES (?, ?, ?, ?)`)
+      .run(parsed.id, parsed.subject, parsed.content, tags);
+    return parsed;
+  }
+
+  upsert(atom: MemoryAtom) {
+    const parsed = this.db.transaction(() => this.writeAtom(atom))();
     this.eventLog.append({
       event_id: makeMemoryId(`${parsed.id}|ADD|${new Date().toISOString()}`),
       action: parsed.action ?? "ADD",
@@ -120,8 +121,68 @@ export class MemoryStore {
       at: new Date().toISOString(),
       atom: parsed,
     });
-
     return parsed;
+  }
+
+  supersede(oldId: string, newAtom: MemoryAtom, relation: ConflictRelation = "DIRECT_CONFLICT") {
+    const oldAtom = this.get(oldId);
+    if (!oldAtom) throw new Error(`旧记忆不存在：${oldId}`);
+    const now = new Date().toISOString();
+    const validAt = newAtom.valid_at ?? now;
+    const updatedOld: MemoryAtom = {
+      ...oldAtom,
+      status: "superseded",
+      invalid_at: oldAtom.invalid_at ?? validAt,
+      expired_at: now,
+      superseded_by: newAtom.id,
+      conflict_relation: relation,
+    };
+    const updatedNew: MemoryAtom = {
+      ...newAtom,
+      status: "active",
+      action: "SUPERSEDE",
+      supersedes: [...new Set([...(newAtom.supersedes ?? []), oldId])],
+      conflict_relation: relation,
+    };
+    const result = this.db.transaction(() => {
+      const oldSaved = this.writeAtom(updatedOld);
+      const newSaved = this.writeAtom(updatedNew);
+      return { old: oldSaved, current: newSaved };
+    })();
+    this.eventLog.append({
+      event_id: makeMemoryId(`${oldId}|SUPERSEDE|${updatedNew.id}|${now}`),
+      action: "SUPERSEDE",
+      atom_id: updatedNew.id,
+      target_id: oldId,
+      at: now,
+      atom: updatedNew,
+      reason: relation,
+    });
+    return result;
+  }
+
+  findConflictCandidates(atom: MemoryAtom, limit = 5): MemoryAtom[] {
+    const candidates = this.search(atom.subject || atom.content, {
+      project: atom.project,
+      type: atom.type,
+      scope: atom.scope,
+      limit: Math.max(limit, 10),
+    }).filter((item) => item.id !== atom.id && item.status === "active");
+
+    if (candidates.length > 0) return candidates.slice(0, limit);
+
+    return this.list({
+      project: atom.project,
+      type: atom.type,
+      scope: atom.scope,
+      limit: 100,
+    })
+      .filter((item) => item.id !== atom.id && item.status === "active")
+      .map((item) => ({ item, score: overlapScore(atom, item) }))
+      .filter(({ score }) => score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map(({ item }) => item);
   }
 
   get(id: string): MemoryAtom | undefined {
@@ -216,4 +277,14 @@ function scoreByTokens(atom: MemoryAtom, tokens: string[]): number {
     if (haystack.includes(token)) score += token.length >= 4 ? 2 : 1;
   }
   return score + atom.confidence + atom.importance / 10;
+}
+
+function overlapScore(a: MemoryAtom, b: MemoryAtom): number {
+  const aTokens = new Set(extractQueryTokens(`${a.subject} ${a.content}`));
+  const bText = `${b.subject} ${b.content}`.toLowerCase();
+  let score = 0;
+  for (const token of aTokens) {
+    if (bText.includes(token)) score += token.length >= 4 ? 2 : 1;
+  }
+  return score;
 }
