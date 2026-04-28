@@ -6,6 +6,7 @@ import { createManualMemory } from "./memory/factory.js";
 import { MemoryStore } from "./memory/store.js";
 import { loadSmokeCases, summarizeSmokeCases } from "./eval/smoke.js";
 import { createAtomFromFact, extractFacts, reconcileFact } from "./extractor/mockExtractor.js";
+import { normalizeFeishuMarkdown } from "./candidate/feishuDoc.js";
 
 const program = new Command();
 
@@ -18,6 +19,28 @@ function storeFromOptions(opts: { db?: string; events?: string }) {
   return new MemoryStore(opts.db ?? "data/memory.db", opts.events ?? "data/memory_events.jsonl");
 }
 
+
+
+program
+  .command("normalize-doc")
+  .description("将飞书 Markdown 文档标准化为 NormalizedMessage，用于验证真实飞书文档读入 POC")
+  .requiredOption("--file <path>", "Markdown 文件路径")
+  .option("--title <title>", "文档标题")
+  .option("--doc-token <token>", "飞书文档 token")
+  .option("--limit <limit>", "输出前 N 条", "5")
+  .action((opts) => {
+    const markdown = readFileSync(opts.file, "utf8");
+    const messages = normalizeFeishuMarkdown(markdown, {
+      title: opts.title,
+      docToken: opts.docToken,
+    });
+    console.log(JSON.stringify({
+      ok: true,
+      command: "normalize-doc",
+      total: messages.length,
+      sample: messages.slice(0, Number(opts.limit)),
+    }, null, 2));
+  });
 
 program
   .command("ingest")

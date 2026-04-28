@@ -55,6 +55,9 @@ npm run dev -- recall "我们为什么不用 MongoDB？" --project kairos --evid
 # 摄取文件并触发 mock 冲突覆盖
 npm run dev -- ingest --file examples/weekly-report-conflict.md --project kairos
 npm run dev -- search "周报" --project kairos --include-history
+
+# 验证飞书 Markdown 文档标准化
+npm run dev -- normalize-doc --file /tmp/feishu-doc.md --title "飞书文档样例"
 ```
 
 > 注意：当前 `add / search / recall / list / history` 已接入本地 SQLite Store 与 JSONL Event Log；LLM 两阶段抽取仍在开发中。
@@ -214,7 +217,7 @@ memoryops/
 - [x] MemoryAtom schema 实现
 - [x] SQLite Store + JSONL Event Log
 - [x] mock Extract / Reconcile 骨架
-- [ ] 飞书文档 / 群聊读入 POC
+- [x] 飞书文档 Markdown 标准化 POC
 - [x] 冲突更新
 - [ ] fast-forward 遗忘提醒
 - [x] smoke benchmark 数据集草案
