@@ -216,7 +216,7 @@ memoryops/
 - [x] Candidate Segment Pipeline 第四步：Context Windowing + Denoising
 - [x] Decision Extractor baseline：结构化抽取决策/规则/风险/工作流
 - [x] DecisionCandidate 写入 MemoryAtom 并支持反向召回
-- [x] 核心评测 runner：决策抽取 / 矛盾更新 / 召回
+- [x] 核心评测 runner：决策抽取 / 矛盾更新 / 召回 / 抗干扰
 
 - [x] 项目方向确定
 - [x] GitHub 仓库初始化

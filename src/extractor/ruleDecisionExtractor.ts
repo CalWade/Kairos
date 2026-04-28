@@ -16,6 +16,9 @@ export function extractDecisionBaseline(window: CandidateWindow): ExtractionResu
   }
 
   if (/SQLite|PostgreSQL|MongoDB|JSONL|状态库|数据库/.test(text)) {
+    if (isUnresolvedQuestion(text)) {
+      return none(evidence, "仅出现未定问题或待讨论表达，不能沉淀为决策记忆");
+    }
     return {
       kind: "decision",
       confidence: 0.82,
@@ -86,6 +89,12 @@ export function extractDecisionBaseline(window: CandidateWindow): ExtractionResu
   return none(evidence, "未识别出可长期复用的决策、规则、风险或工作流");
 }
 
+function isUnresolvedQuestion(text: string): boolean {
+  return /[？?]|会不会|要不要|能不能|是否/.test(text)
+    && /还没定|未定|再讨论|待确认|之后再说|晚上再讨论/.test(text)
+    && !/最终|决定|选择|采用|使用|不使用|不允许|必须|改为|先按|同意/.test(text);
+}
+
 function none(evidence: string[], reasoning: string): ExtractionResult {
   return {
     kind: "none",
@@ -115,6 +124,7 @@ function extractStorageReasons(text: string): string[] {
   if (/demo 足够轻|本地 demo 足够轻/.test(text)) reasons.push("SQLite 本地 demo 足够轻");
   if (/查询和事务/.test(text)) reasons.push("SQLite 查询和事务比纯 JSON 更稳定");
   if (/部署成本太高|评委跑不起来/.test(text)) reasons.push("PostgreSQL 对复赛 demo 部署成本较高，可能影响评委运行");
+  if (/部署链路太重/.test(text)) reasons.push("MongoDB 对本地 demo 部署链路较重");
   if (/可审计|Event Log|JSONL/.test(text)) reasons.push("JSONL Event Log 可以保留可审计事件日志");
   return reasons.length ? reasons : ["片段中提到存储方案选择及相关取舍" ];
 }
@@ -123,6 +133,9 @@ function extractRejectedStorageOptions(text: string) {
   const rejected: { option: string; reason: string }[] = [];
   if (/PostgreSQL/.test(text) && /部署成本太高|评委跑不起来/.test(text)) {
     rejected.push({ option: "PostgreSQL", reason: "复赛 demo 部署成本较高，可能影响评委运行" });
+  }
+  if (/MongoDB/.test(text) && /不使用|部署链路太重/.test(text)) {
+    rejected.push({ option: "MongoDB", reason: "本地 demo 部署链路较重" });
   }
   if (/JSON 文件|纯 JSON/.test(text) && /查询和事务/.test(text)) {
     rejected.push({ option: "纯 JSON 文件", reason: "查询和事务能力弱于 SQLite" });
@@ -182,9 +195,11 @@ function extractWorkflowSteps(text: string): string[] {
   return text
     .split("\n")
     .map((line) => line.replace(/^.+?：/, "").trim())
-    .filter((line) => /npm|pnpm|git|测试平台|重新领|引导|配置|提交前|必须/.test(line));
+    .filter((line) => /npm|pnpm|git|测试平台|重新领|引导|配置|提交前|必须|导出|云文档|normalize-chat-export|segment-chat-export|sender|timestamp/.test(line));
 }
 
 function extractCommands(text: string): string[] {
-  return text.match(/(?:npm|pnpm|git)\s+[^\n`]+/g) ?? [];
+  const commands = text.match(/(?:npm|pnpm|git)\s+[^，。；;\n`]+/g) ?? [];
+  const cliNames = text.match(/(?:normalize-chat-export|segment-chat-export|extract-decision|decision-card)/g) ?? [];
+  return [...new Set([...commands, ...cliNames])];
 }

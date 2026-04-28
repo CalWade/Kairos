@@ -1,1 +1,4 @@
-{"id":"weekly_receiver_001","old":"以后周报每周五发给 Alice。","new":"不对，周报以后发给 Bob，Alice 不再负责这个了。","query":"周报发给谁？","expected_current_contains":"Bob","expected_old_status":"superseded"}
+{"id": "weekly_receiver_001", "old": "以后周报每周五发给 Alice。", "new": "不对，周报以后发给 Bob，Alice 不再负责这个了。", "query": "周报发给谁？", "expected_current_contains": "Bob", "expected_old_status": "superseded", "expected_relation": "DIRECT_CONFLICT"}
+{"id": "database_selection_001", "old": "最终决定数据库方案采用 PostgreSQL。", "new": "复赛 demo 阶段改为使用 SQLite，PostgreSQL 部署成本太高，先不作为默认方案。", "query": "数据库方案是什么？", "expected_current_contains": "SQLite", "expected_old_status": "superseded", "expected_relation": "DIRECT_CONFLICT"}
+{"id": "api_key_policy_001", "old": "测试阶段可以在前端临时直连 API Key。", "new": "生产环境不允许前端直连 API Key，必须走服务端代理。", "query": "API Key 能不能前端直连？", "expected_current_contains": "服务端", "expected_old_status": "superseded", "expected_relation": "DIRECT_CONFLICT"}
+{"id": "temporal_sequence_001", "old": "4 月 30 日之前演示环境使用 mock 数据。", "new": "从 5 月 1 日开始演示环境改为接真实飞书导出数据。", "query": "演示环境使用什么数据？", "expected_current_contains": "真实飞书", "expected_old_status": "superseded", "expected_relation": "TEMPORAL_SEQUENCE"}

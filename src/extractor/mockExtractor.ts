@@ -56,9 +56,9 @@ export function createAtomFromFact(fact: CandidateFact) {
 }
 
 function inferType(text: string): MemoryType {
+  if (/风险|禁止|不允许|API Key|密钥|生产环境/.test(text)) return "risk";
   if (/决定|最终|选择|采用|不使用|不用|方案/.test(text)) return "decision";
   if (/以后|每周|周报|固定|约定|规则|发给/.test(text)) return "convention";
-  if (/风险|禁止|不允许|API Key|密钥|生产环境/.test(text)) return "risk";
   if (/截止|DDL|提交|到期|deadline/i.test(text)) return "deadline";
   if (/命令|npm|pnpm|git|部署|运行/.test(text)) return "cli_command";
   return "knowledge";
@@ -87,8 +87,8 @@ function inferSubject(text: string, type: MemoryType): string {
 }
 
 function inferRelation(newText: string, oldText: string) {
-  if (/不对|改为|改成|以后/.test(newText)) return "DIRECT_CONFLICT" as const;
-  if (/不再|离职|取消|废弃/.test(newText)) return "INDIRECT_INVALIDATION" as const;
   if (/之前|之后|从.*开始|到.*为止/.test(newText)) return "TEMPORAL_SEQUENCE" as const;
+  if (/不对|改为|改成|以后|不允许|必须|先不作为|不再/.test(newText)) return "DIRECT_CONFLICT" as const;
+  if (/离职|取消|废弃/.test(newText)) return "INDIRECT_INVALIDATION" as const;
   return oldText === newText ? "COMPLEMENT" as const : "INDEPENDENT" as const;
 }

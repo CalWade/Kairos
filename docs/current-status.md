@@ -14,7 +14,7 @@
 - 候选片段 baseline：`segment-chat-export`
 - 结构化决策抽取 baseline：`extract-decision`
 - DecisionCandidate → MemoryAtom 写入
-- 核心评测 runner：decision-extraction / conflict-update / recall
+- 核心评测 runner：decision-extraction / conflict-update / recall / anti-interference
 - Vitest 单元测试
 
 ## 真实边界
@@ -45,5 +45,5 @@ Kairos 当前聚焦：项目决策记忆引擎。
 1. LLMDecisionExtractor：替换规则 baseline。
 2. Remind / Forgetting：风险记忆复习提醒。
 3. Decision Card：历史决策卡片文本/飞书卡片。
-4. Benchmark 扩充：从极小 case 扩到可展示数据集。
+4. Benchmark 扩充：当前 core eval 为 24 个最小用例，仍需扩到可展示数据集。
 5. 飞书端演示闭环：至少完成导出文档 → CLI → recall 的稳定 demo。

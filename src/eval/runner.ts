@@ -43,10 +43,29 @@ export function runConflictUpdateEval(path = "eval/datasets/conflict-update.json
     const history = store.search(item.query, { project: "kairos", includeHistory: true });
     const currentOk = hits.some((hit) => hit.content.includes(item.expected_current_contains));
     const oldOk = history.some((hit) => hit.id === oldAtom.id && hit.status === item.expected_old_status);
-    const passed = currentOk && oldOk;
+    const relationOk = !item.expected_relation || hits.some((hit) => hit.conflict_relation === item.expected_relation);
+    const passed = currentOk && oldOk && relationOk;
     return { id: item.id, passed, actual: { hits, history }, reason: passed ? undefined : "当前值或旧记忆状态不符合期望" };
   }));
   return summarize("conflict-update", results);
+}
+
+export function runAntiInterferenceEval(path = "eval/datasets/anti-interference.jsonl"): EvalResult {
+  const cases = readJsonl<any>(path);
+  const results = cases.map((item) => withTempStore((store) => {
+    for (const memory of item.memories) {
+      const extraction = extractDecisionBaseline(window(memory));
+      const atom = extractionToMemoryAtom(extraction, window(memory), "kairos");
+      if (atom) store.upsert(atom);
+    }
+    const hits = store.search(item.query, { project: "kairos", limit: 1 });
+    const text = hits.map((hit) => hit.content).join("\n");
+    const containsOk = (item.expected_contains ?? []).every((needle: string) => text.includes(needle));
+    const notContainsOk = (item.expected_not_contains ?? []).every((needle: string) => !text.includes(needle));
+    const passed = containsOk && notContainsOk;
+    return { id: item.id, passed, actual: hits, reason: passed ? undefined : "抗干扰召回未命中期望或命中了不相关内容" };
+  }));
+  return summarize("anti-interference", results);
 }
 
 export function runRecallEval(path = "eval/datasets/recall.jsonl"): EvalResult {
@@ -64,7 +83,7 @@ export function runRecallEval(path = "eval/datasets/recall.jsonl"): EvalResult {
 }
 
 export function runAllCoreEvals(): EvalResult[] {
-  return [runDecisionExtractionEval(), runConflictUpdateEval(), runRecallEval()];
+  return [runDecisionExtractionEval(), runConflictUpdateEval(), runRecallEval(), runAntiInterferenceEval()];
 }
 
 function window(text: string): CandidateWindow {

@@ -1,3 +1,12 @@
 {"id":"decision_sqlite_001","input":"张三：最终决定 MVP 阶段使用 SQLite 作为当前状态库，同时保留 JSONL Event Log。王五：PostgreSQL 对复赛 demo 来说部署成本太高，容易让评委跑不起来。","expected_kind":"decision","expected_topic":"local_storage_selection","expected_contains":["SQLite","PostgreSQL"]}
+{"id":"decision_json_rejected_001","input":"李雷：纯 JSON 文件虽然简单，但后续查询和事务会很麻烦。最终 Store 层先按 SQLite + JSONL 实现。","expected_kind":"decision","expected_topic":"local_storage_selection","expected_contains":["SQLite","纯 JSON"]}
+{"id":"decision_mongodb_rejected_001","input":"王五：我们这轮不使用 MongoDB，原因是本地 demo 部署链路太重。张三：同意，当前先选择 SQLite，后续需要云端同步时再讨论。","expected_kind":"decision","expected_topic":"local_storage_selection","expected_contains":["MongoDB","SQLite"]}
+{"id":"convention_weekly_bob_001","input":"不对，周报以后发给 Bob，Alice 不再负责这个了。","expected_kind":"convention","expected_topic":"weekly_report_receiver","expected_contains":["Bob"]}
+{"id":"convention_weekly_alice_001","input":"团队约定：每周五下班前把项目周报发给 Alice。","expected_kind":"convention","expected_topic":"weekly_report_receiver","expected_contains":["Alice"]}
 {"id":"risk_preview_ip_001","input":"韦贺文：现在是遇到这个bug。黄威健：这个要给独立ip。黄威健：有点问题，预览pdf有中文乱码。","expected_kind":"risk","expected_topic":"preview_independent_ip_requirement","expected_contains":["独立 IP","中文乱码"]}
+{"id":"risk_api_key_001","input":"生产环境不允许前端直连 API Key，必须走服务端代理，否则密钥泄露风险太高。","expected_kind":"risk","expected_topic":"api_key_policy","expected_contains":["API Key","服务端"]}
+{"id":"workflow_precommit_001","input":"提交前必须先运行 npm test -- --run，再运行 npm run dev -- eval --core，两个都通过再 push。","expected_kind":"workflow","expected_topic":"workflow_or_cli_steps","expected_contains":["npm test","eval --core"]}
+{"id":"workflow_feishu_export_001","input":"飞书会话导出流程：先把群聊导出到云文档，再运行 normalize-chat-export，确认 sender 和 timestamp 正常后再 segment-chat-export。","expected_kind":"workflow","expected_topic":"workflow_or_cli_steps","expected_contains":["normalize-chat-export","segment-chat-export"]}
 {"id":"none_noise_001","input":"黄威健：ok。韦贺文：哈哈。","expected_kind":"none","expected_topic":"","expected_contains":[]}
+{"id":"none_status_chatter_001","input":"张三：我下午可能晚点到。李雷：收到。","expected_kind":"none","expected_topic":"","expected_contains":[]}
+{"id":"none_question_only_001","input":"王五：PostgreSQL 会不会太重？李雷：这个还没定，晚上再讨论。","expected_kind":"none","expected_topic":"","expected_contains":[]}
