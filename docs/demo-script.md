@@ -90,3 +90,23 @@ npm run dev -- extract-decision \
 ```
 
 说明：`--fallback` 表示 LLM 请求失败时回退到规则 baseline。当前这只是可选抽取路径，不代表已经完成生产级抽取效果。
+
+
+## 历史决策卡片演示
+
+先通过 `extract-decision --write` 写入一条决策记忆，记录返回的 `saved.id`，再运行：
+
+```bash
+npm run dev -- decision-card <memory_id>
+```
+
+输出会包含：
+
+- 当前状态
+- 决策与结论
+- 决策理由
+- 被否方案
+- 反对 / 顾虑
+- 证据摘录
+
+说明：当前是 CLI Markdown 文本版，适合作为飞书交互式卡片的稳定内容层；飞书卡片推送尚未实现。

@@ -64,6 +64,8 @@ npm run dev -- extract-decision --text "最终决定 MVP 阶段使用 SQLite，P
 # 可选：使用主办方提供的 OpenAI-compatible LLM 做结构化抽取，失败时回退 baseline
 npm run dev -- extract-decision --llm --fallback --text "最终决定 MVP 阶段使用 SQLite，PostgreSQL 部署成本太高" --project kairos --write
 npm run dev -- recall "为什么不用 PostgreSQL？" --project kairos --evidence
+# 根据记忆 ID 输出历史决策卡片文本
+npm run dev -- decision-card <memory_id>
 ```
 
 > 注意：当前 `add / search / recall / list / history` 已接入本地 SQLite Store 与 JSONL Event Log；LLMDecisionExtractor 已有 OpenAI-compatible 可选路径，但仍需更多真实数据评测，不应把它宣传成生产级效果。
@@ -219,6 +221,7 @@ memoryops/
 - [x] Decision Extractor baseline：结构化抽取决策/规则/风险/工作流
 - [x] LLMDecisionExtractor 可选路径：读取本地 `.env`，支持 OpenAI-compatible chat completions 与 baseline fallback
 - [x] DecisionCandidate 写入 MemoryAtom 并支持反向召回
+- [x] Decision Card 文本版：`memoryops decision-card <memory_id>`
 - [x] 核心评测 runner：决策抽取 / 矛盾更新 / 召回 / 抗干扰 / 到期提醒
 
 - [x] 项目方向确定
@@ -234,6 +237,7 @@ memoryops/
 - [x] 冲突更新
 - [x] Remind 本地 MVP：按 review_at 查询到期风险记忆
 - [ ] 飞书端提醒推送与提醒处理状态
+- [ ] 飞书交互式 Decision Card 推送
 - [x] smoke benchmark 数据集草案
 - [ ] Demo 录屏
 

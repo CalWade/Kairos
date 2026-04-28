@@ -14,6 +14,7 @@ import { buildCandidateWindows } from "./candidate/window.js";
 import { extractDecisionBaseline } from "./extractor/ruleDecisionExtractor.js";
 import { extractDecisionWithLlm } from "./extractor/llmDecisionExtractor.js";
 import { extractionToMemoryAtom } from "./extractor/toMemoryAtom.js";
+import { buildDecisionCard, renderDecisionCardMarkdown } from "./memory/decisionCard.js";
 
 const program = new Command();
 
@@ -253,6 +254,29 @@ program
         evidence: opts.evidence ? item.source : undefined,
       })),
     }, null, 2));
+  });
+
+
+program
+  .command("decision-card")
+  .argument("<atomId>")
+  .description("输出历史决策卡片文本（Markdown），用于 CLI/飞书卡片前的稳定展示层")
+  .option("--json", "输出结构化 JSON，而不是 Markdown")
+  .option("--db <path>", "SQLite 数据库路径")
+  .option("--events <path>", "JSONL event log 路径")
+  .action((atomId, opts) => {
+    const atom = storeFromOptions(opts).get(atomId);
+    if (!atom) {
+      console.log(JSON.stringify({ ok: false, command: "decision-card", error: `记忆不存在：${atomId}` }, null, 2));
+      process.exitCode = 1;
+      return;
+    }
+    const card = buildDecisionCard(atom);
+    if (opts.json) {
+      console.log(JSON.stringify({ ok: true, command: "decision-card", card }, null, 2));
+      return;
+    }
+    console.log(renderDecisionCardMarkdown(card));
   });
 
 program
