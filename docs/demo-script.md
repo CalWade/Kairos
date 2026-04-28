@@ -121,6 +121,8 @@ npm run dev -- extract-decision \
 npm run dev -- decision-card <memory_id>
 # 只预览飞书 interactive card payload，不发送
 npm run dev -- decision-card <memory_id> --feishu-json
+# 真实发送需要显式 webhook；不要在公开材料中写入 webhook URL
+npm run dev -- decision-card <memory_id> --send-feishu-webhook --feishu-webhook <webhook_url>
 ```
 
 输出会包含：
@@ -132,7 +134,7 @@ npm run dev -- decision-card <memory_id> --feishu-json
 - 反对 / 顾虑
 - 证据摘录
 
-说明：当前已有 CLI Markdown 文本版和飞书 interactive card payload 预览；飞书卡片推送尚未实现。
+说明：当前已有 CLI Markdown 文本版、飞书 interactive card payload 预览和机器人 webhook 发送路径；发送前必须确认 webhook 对应的群和卡片内容。
 
 
 ## Recall 格式化回答演示

@@ -16,6 +16,8 @@ import { extractDecisionWithLlm } from "./extractor/llmDecisionExtractor.js";
 import { extractionToMemoryAtom } from "./extractor/toMemoryAtom.js";
 import { buildDecisionCard, renderDecisionCardFeishuPayload, renderDecisionCardMarkdown } from "./memory/decisionCard.js";
 import { formatRecallAnswer } from "./memory/recallFormatter.js";
+import { redactWebhookUrl, sendFeishuInteractiveWebhook } from "./feishuWebhook.js";
+import { loadEnvValue } from "./llm/config.js";
 
 const program = new Command();
 
@@ -262,9 +264,11 @@ program
   .description("输出历史决策卡片文本（Markdown），用于 CLI/飞书卡片前的稳定展示层")
   .option("--json", "输出结构化 JSON，而不是 Markdown")
   .option("--feishu-json", "输出飞书 interactive card payload JSON（仅生成，不发送）")
+  .option("--send-feishu-webhook", "通过飞书机器人 webhook 发送卡片（外部动作，必须显式指定）")
+  .option("--feishu-webhook <url>", "飞书机器人 webhook；也可用 KAIROS_FEISHU_WEBHOOK_URL")
   .option("--db <path>", "SQLite 数据库路径")
   .option("--events <path>", "JSONL event log 路径")
-  .action((atomId, opts) => {
+  .action(async (atomId, opts) => {
     const atom = storeFromOptions(opts).get(atomId);
     if (!atom) {
       console.log(JSON.stringify({ ok: false, command: "decision-card", error: `记忆不存在：${atomId}` }, null, 2));
@@ -272,8 +276,17 @@ program
       return;
     }
     const card = buildDecisionCard(atom);
+    const feishuCard = renderDecisionCardFeishuPayload(card);
+    if (opts.sendFeishuWebhook) {
+      const webhookUrl = opts.feishuWebhook ?? loadEnvValue("KAIROS_FEISHU_WEBHOOK_URL");
+      if (!webhookUrl) throw new Error("缺少飞书 webhook：请传 --feishu-webhook 或设置 KAIROS_FEISHU_WEBHOOK_URL");
+      const result = await sendFeishuInteractiveWebhook(webhookUrl, feishuCard);
+      console.log(JSON.stringify({ ok: result.ok, command: "decision-card", sent: result, webhook: redactWebhookUrl(webhookUrl), memory_id: atom.id }, null, 2));
+      if (!result.ok) process.exitCode = 1;
+      return;
+    }
     if (opts.feishuJson) {
-      console.log(JSON.stringify({ ok: true, command: "decision-card", card: renderDecisionCardFeishuPayload(card) }, null, 2));
+      console.log(JSON.stringify({ ok: true, command: "decision-card", card: feishuCard }, null, 2));
       return;
     }
     if (opts.json) {
@@ -310,7 +323,7 @@ program
   .description("查看单条记忆详情")
   .option("--db <path>", "SQLite 数据库路径")
   .option("--events <path>", "JSONL event log 路径")
-  .action((atomId, opts) => {
+  .action(async (atomId, opts) => {
     const atom = storeFromOptions(opts).get(atomId);
     console.log(JSON.stringify({ ok: !!atom, command: "history", atom }, null, 2));
   });
@@ -361,7 +374,7 @@ remind
   .option("--db <path>", "SQLite 数据库路径")
   .option("--events <path>", "JSONL event log 路径")
   .description("标记一条提醒已处理，并清除 review_at")
-  .action((atomId, opts) => {
+  .action(async (atomId, opts) => {
     const atom = storeFromOptions(opts).ackReminder(atomId, { now: opts.now });
     console.log(JSON.stringify({ ok: true, command: "remind ack", atom }, null, 2));
   });
@@ -374,7 +387,7 @@ remind
   .option("--db <path>", "SQLite 数据库路径")
   .option("--events <path>", "JSONL event log 路径")
   .description("稍后提醒：把 review_at 改到指定时间")
-  .action((atomId, opts) => {
+  .action(async (atomId, opts) => {
     const atom = storeFromOptions(opts).snoozeReminder(atomId, opts.until, { now: opts.now });
     console.log(JSON.stringify({ ok: true, command: "remind snooze", atom }, null, 2));
   });

@@ -156,7 +156,7 @@ type DecisionCandidate = {
 - DecisionCandidate → MemoryAtom 写入；
 - Recall 确定性格式化回答：能把最相关记忆整理为历史决策 / 风险 / 流程回答；
 - Decision Card 文本版：`decision-card <memory_id>`；
-- 飞书 Decision Card payload 预览：`decision-card <memory_id> --feishu-json`，只生成 JSON，不主动发送；
+- 飞书 Decision Card payload 预览：`decision-card <memory_id> --feishu-json`，以及显式 webhook 发送路径：`--send-feishu-webhook`；
 - Remind 本地 MVP：按 `review_at <= --now` 查询到期风险记忆；
 - 一键本地端到端演示：`npm run demo:e2e`；
 - 核心评测：decision-extraction / conflict-update / recall / anti-interference / remind；
@@ -175,7 +175,7 @@ type DecisionCandidate = {
 2. Candidate Segment Pipeline 仍是输入清洗 baseline，不是核心智能算法；
 3. `recall` 是检索 + 确定性格式化回答，不是完整自然语言问答生成；
 4. `remind` 已有本地到期查询、ack、snooze MVP，但尚未实现飞书推送和周期性自动投递；
-5. 历史决策卡片已有 CLI 文本版和飞书 payload 生成，但尚未真正发送飞书交互式卡片；
+5. 历史决策卡片已有 CLI 文本版、飞书 payload 生成和 webhook 发送路径，但尚未内置飞书 OAuth；
 6. 飞书接入目前依赖 OpenClaw 工具拉取 / 导出文档，Kairos CLI 尚未内置飞书 API OAuth 调用；
 7. Benchmark 数据集仍然很小，core eval 只有 26 个最小用例，只能证明最小闭环可跑，不能代表真实生产效果。
 
@@ -187,7 +187,7 @@ type DecisionCandidate = {
 
 1. 修正 LLM 路径稳定性：缩短 prompt、优化 timeout/retry、扩大真实样本评测；
 2. 完善 Remind 投递链路：飞书推送、周期性自动投递、提醒策略配置；
-3. 安全接入飞书卡片推送：复用现有 `--feishu-json` payload，但发送前必须确认对象和内容；
+3. 完善飞书卡片推送：当前已有 webhook 发送路径，后续可接入 OAuth / OpenClaw 演示流；
 4. 扩充 Benchmark：真实飞书导出片段、抗干扰、矛盾更新、召回质量；
 5. 稳定飞书会话导出 → CLI → recall / decision-card 的演示链路；
 6. 持续写清楚当前能力边界，避免夸大。

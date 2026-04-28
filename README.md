@@ -73,6 +73,8 @@ npm run dev -- recall "为什么不用 PostgreSQL？" --project kairos --evidenc
 npm run dev -- decision-card <memory_id>
 # 预览飞书 interactive card payload（只生成 JSON，不发送）
 npm run dev -- decision-card <memory_id> --feishu-json
+# 真实发送到飞书机器人 webhook（外部动作，需显式提供 webhook）
+npm run dev -- decision-card <memory_id> --send-feishu-webhook --feishu-webhook <webhook_url>
 ```
 
 > 注意：当前 `add / search / recall / list / history` 已接入本地 SQLite Store 与 JSONL Event Log；`recall` 已有确定性格式化回答，但不是完整生成式 QA；LLMDecisionExtractor 已有 OpenAI-compatible 可选路径，并提供显式 LLM eval；但仍需更多真实数据评测，不应把它宣传成生产级效果。
@@ -248,7 +250,7 @@ memoryops/
 - [x] 冲突更新
 - [x] Remind 本地 MVP：按 review_at 查询到期风险记忆，支持 ack / snooze
 - [ ] 飞书端提醒推送与提醒处理状态
-- [ ] 飞书交互式 Decision Card 推送（payload 已可生成，尚未发送）
+- [x] 飞书机器人 webhook Decision Card 推送路径：`decision-card <id> --send-feishu-webhook`（需显式 webhook）
 - [x] smoke benchmark 数据集草案
 - [ ] Demo 录屏
 

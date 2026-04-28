@@ -23,6 +23,11 @@ export function loadLlmConfig(envPath = ".env", env: NodeJS.ProcessEnv = process
   };
 }
 
+export function loadEnvValue(key: string, envPath = ".env", env: NodeJS.ProcessEnv = process.env): string | undefined {
+  const fileEnv = readEnvFile(resolve(envPath));
+  return env[key] ?? fileEnv[key];
+}
+
 export function chatCompletionsUrl(baseUrl: string): string {
   const normalized = baseUrl.replace(/\/$/, "");
   return normalized.endsWith("/chat/completions") ? normalized : `${normalized}/chat/completions`;
