@@ -59,6 +59,7 @@ npm run dev -- search "周报" --project kairos --include-history
 # 验证飞书会话导出文档标准化
 npm run dev -- normalize-chat-export --file /tmp/feishu-chat-export.md --doc-token <doc_token>
 npm run dev -- segment-chat-export --file /tmp/feishu-chat-export.md --doc-token <doc_token>
+npm run dev -- extract-decision --text "最终决定 MVP 阶段使用 SQLite，PostgreSQL 部署成本太高"
 ```
 
 > 注意：当前 `add / search / recall / list / history` 已接入本地 SQLite Store 与 JSONL Event Log；LLM 两阶段抽取仍在开发中。
@@ -211,6 +212,7 @@ memoryops/
 - [x] Candidate Segment Pipeline 第二步：Conversation Segmentation 对话切分
 - [x] Candidate Segment Pipeline 第三步：Salience Scoring + Adjacent Segment Merge
 - [x] Candidate Segment Pipeline 第四步：Context Windowing + Denoising
+- [x] Decision Extractor baseline：结构化抽取决策/规则/风险/工作流
 
 - [x] 项目方向确定
 - [x] GitHub 仓库初始化

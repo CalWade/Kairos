@@ -10,6 +10,7 @@ import { normalizeFeishuChatExport } from "./candidate/feishuChatExport.js";
 import { segmentMessages } from "./candidate/segment.js";
 import { mergeAdjacentScoredSegments, scoreSegments } from "./candidate/salience.js";
 import { buildCandidateWindows } from "./candidate/window.js";
+import { extractDecisionBaseline } from "./extractor/ruleDecisionExtractor.js";
 
 const program = new Command();
 
@@ -25,6 +26,30 @@ function storeFromOptions(opts: { db?: string; events?: string }) {
 
 
 
+
+
+program
+  .command("extract-decision")
+  .description("从文本或候选窗口中抽取结构化决策/规则/风险/工作流（baseline）")
+  .option("--text <text>", "直接输入 denoised_text")
+  .option("--file <path>", "从文件读取 denoised_text")
+  .action((opts) => {
+    if (!opts.text && !opts.file) throw new Error("请提供 --text 或 --file");
+    const text = opts.text ?? readFileSync(opts.file, "utf8");
+    const result = extractDecisionBaseline({
+      id: "win_cli",
+      segment_id: "seg_cli",
+      topic_hint: "manual",
+      salience_score: 0.8,
+      salience_signals: [],
+      candidate_eligible: true,
+      denoised_text: text,
+      evidence_message_ids: ["manual_input"],
+      dropped_message_ids: [],
+      estimated_tokens: Math.ceil(text.length / 2),
+    });
+    console.log(JSON.stringify({ ok: true, command: "extract-decision", result }, null, 2));
+  });
 
 program
   .command("segment-chat-export")
