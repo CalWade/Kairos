@@ -11,7 +11,8 @@
     "build": "tsc",
     "test": "vitest",
     "eval:smoke": "tsx src/cli.ts eval --smoke",
-    "demo:e2e": "bash scripts/demo-e2e.sh"
+    "demo:e2e": "bash scripts/demo-e2e.sh",
+    "demo:feishu-workflow": "bash scripts/demo-feishu-workflow.sh"
   },
   "keywords": [
     "memory",

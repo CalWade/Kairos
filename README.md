@@ -52,6 +52,8 @@ npm run dev -- eval --suite llm-decision-extraction
 
 # 一键本地端到端演示：抽取 → 召回 → 决策卡片 → 矛盾更新 → 到期提醒 → 评测
 npm run demo:e2e
+# 模拟 OpenClaw 飞书消息入口 → Kairos 工作流判断
+npm run demo:feishu-workflow
 
 # 当前 add / recall 仍是 dry-run mock
 npm run dev -- add --text "最终决定使用 PostgreSQL，不使用 MongoDB" --project kairos --type decision --subject database_selection
@@ -265,3 +267,22 @@ Kairos 会借鉴但不复刻以下系统：
 - LoCoMo / LongMemEval：长期交互记忆 Benchmark 思路。
 
 最终目标是把这些成熟范式收敛到飞书企业协作场景，重点解决项目决策、团队约定、风险提醒和长期上下文遗忘问题。
+
+
+## OpenClaw 飞书入口集成
+
+Kairos 不自建飞书事件服务器；推荐通过 OpenClaw hook 接收飞书消息，再调用 Kairos 引擎：
+
+```bash
+openclaw hooks enable kairos-feishu-ingress
+openclaw hooks check
+```
+
+Hook 位置：`hooks/kairos-feishu-ingress/`，监听 `message:received`。默认只把 workflow 输出写入 `runs/kairos-feishu-ingress.jsonl`；如需真实发送卡片，设置：
+
+```bash
+KAIROS_HOOK_SEND_FEISHU=1
+KAIROS_FEISHU_WEBHOOK_URL=...
+```
+
+这一路线是“OpenClaw 负责飞书接收，Kairos 负责记忆判断和卡片生成/发送”，避免自建公网回调和 OAuth。

@@ -177,3 +177,21 @@ npm run dev -- remind ack <memory_id>
 ```
 
 说明：当前是本地提醒生命周期 MVP；`ack` 会清除 `review_at`，`snooze` 会把 `review_at` 移动到指定时间。飞书推送和周期性自动投递尚未实现。
+
+
+## OpenClaw 飞书入口工作流
+
+本项目不自建飞书事件服务器，飞书消息接收交给 OpenClaw hook：
+
+```bash
+openclaw hooks enable kairos-feishu-ingress
+openclaw hooks check
+```
+
+本地可用下面脚本模拟“飞书群消息触发 Kairos 工作流”：
+
+```bash
+npm run demo:feishu-workflow
+```
+
+工作流：飞书消息文本 → `memoryops feishu-workflow` → 判断是否命中历史决策 → 输出 answer/card/action。默认不发送；设置 `KAIROS_HOOK_SEND_FEISHU=1` 和 `KAIROS_FEISHU_WEBHOOK_URL` 后才会发卡片。
