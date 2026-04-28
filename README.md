@@ -48,6 +48,9 @@ npm run dev -- schema:check
 npm run dev -- eval --smoke
 npm run dev -- eval --core
 
+# 一键本地端到端演示：抽取 → 召回 → 决策卡片 → 矛盾更新 → 到期提醒 → 评测
+npm run demo:e2e
+
 # 当前 add / recall 仍是 dry-run mock
 npm run dev -- add --text "最终决定使用 PostgreSQL，不使用 MongoDB" --project kairos --type decision --subject database_selection
 npm run dev -- search "PostgreSQL" --project kairos

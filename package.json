@@ -10,7 +10,8 @@
     "dev": "tsx src/cli.ts",
     "build": "tsc",
     "test": "vitest",
-    "eval:smoke": "tsx src/cli.ts eval --smoke"
+    "eval:smoke": "tsx src/cli.ts eval --smoke",
+    "demo:e2e": "bash scripts/demo-e2e.sh"
   },
   "keywords": [
     "memory",
