@@ -75,3 +75,18 @@ decision-extraction: pass
 conflict-update: pass
 recall: pass
 ```
+
+
+## 可选：LLM 抽取演示
+
+如果本地 `.env` 已配置主办方提供的 OpenAI-compatible 接口，可以演示 LLMDecisionExtractor：
+
+```bash
+npm run dev -- extract-decision \
+  --llm \
+  --fallback \
+  --project kairos \
+  --text "张三：最终决定 MVP 阶段使用 SQLite 作为当前状态库，同时保留 JSONL Event Log。王五：PostgreSQL 对复赛 demo 来说部署成本太高，容易让评委跑不起来。"
+```
+
+说明：`--fallback` 表示 LLM 请求失败时回退到规则 baseline。当前这只是可选抽取路径，不代表已经完成生产级抽取效果。

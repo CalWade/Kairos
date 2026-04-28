@@ -12,6 +12,7 @@ import { segmentMessages } from "./candidate/segment.js";
 import { mergeAdjacentScoredSegments, scoreSegments } from "./candidate/salience.js";
 import { buildCandidateWindows } from "./candidate/window.js";
 import { extractDecisionBaseline } from "./extractor/ruleDecisionExtractor.js";
+import { extractDecisionWithLlm } from "./extractor/llmDecisionExtractor.js";
 import { extractionToMemoryAtom } from "./extractor/toMemoryAtom.js";
 
 const program = new Command();
@@ -37,9 +38,11 @@ program
   .option("--file <path>", "从文件读取 denoised_text")
   .option("--project <project>", "项目名")
   .option("--write", "将抽取结果写入 Memory Store")
+  .option("--llm", "使用 LLMDecisionExtractor；未指定时使用规则 baseline")
+  .option("--fallback", "LLM 调用失败时回退到规则 baseline")
   .option("--db <path>", "SQLite 数据库路径")
   .option("--events <path>", "JSONL event log 路径")
-  .action((opts) => {
+  .action(async (opts) => {
     if (!opts.text && !opts.file) throw new Error("请提供 --text 或 --file");
     const text = opts.text ?? readFileSync(opts.file, "utf8");
     const window = {
@@ -54,7 +57,9 @@ program
       dropped_message_ids: [],
       estimated_tokens: Math.ceil(text.length / 2),
     };
-    const result = extractDecisionBaseline(window);
+    const result = opts.llm
+      ? await extractDecisionWithLlm(window, { fallback: !!opts.fallback })
+      : extractDecisionBaseline(window);
     const atom = extractionToMemoryAtom(result, window, opts.project);
     const saved = opts.write && atom ? storeFromOptions(opts).upsert(atom) : undefined;
     console.log(JSON.stringify({ ok: true, command: "extract-decision", result, atom, saved }, null, 2));

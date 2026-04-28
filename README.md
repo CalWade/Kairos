@@ -61,10 +61,12 @@ npm run dev -- search "周报" --project kairos --include-history
 npm run dev -- normalize-chat-export --file /tmp/feishu-chat-export.md --doc-token <doc_token>
 npm run dev -- segment-chat-export --file /tmp/feishu-chat-export.md --doc-token <doc_token>
 npm run dev -- extract-decision --text "最终决定 MVP 阶段使用 SQLite，PostgreSQL 部署成本太高" --project kairos --write
+# 可选：使用主办方提供的 OpenAI-compatible LLM 做结构化抽取，失败时回退 baseline
+npm run dev -- extract-decision --llm --fallback --text "最终决定 MVP 阶段使用 SQLite，PostgreSQL 部署成本太高" --project kairos --write
 npm run dev -- recall "为什么不用 PostgreSQL？" --project kairos --evidence
 ```
 
-> 注意：当前 `add / search / recall / list / history` 已接入本地 SQLite Store 与 JSONL Event Log；LLM 两阶段抽取仍在开发中。
+> 注意：当前 `add / search / recall / list / history` 已接入本地 SQLite Store 与 JSONL Event Log；LLMDecisionExtractor 已有 OpenAI-compatible 可选路径，但仍需更多真实数据评测，不应把它宣传成生产级效果。
 
 ## 核心设计
 
@@ -215,6 +217,7 @@ memoryops/
 - [x] Candidate Segment Pipeline 第三步：Salience Scoring + Adjacent Segment Merge
 - [x] Candidate Segment Pipeline 第四步：Context Windowing + Denoising
 - [x] Decision Extractor baseline：结构化抽取决策/规则/风险/工作流
+- [x] LLMDecisionExtractor 可选路径：读取本地 `.env`，支持 OpenAI-compatible chat completions 与 baseline fallback
 - [x] DecisionCandidate 写入 MemoryAtom 并支持反向召回
 - [x] 核心评测 runner：决策抽取 / 矛盾更新 / 召回 / 抗干扰 / 到期提醒
 
