@@ -1,0 +1,4 @@
+{"id": "llm_decision_storage_natural_001", "input": "讨论了一圈，MVP 阶段先别上 PostgreSQL。评委本地跑 demo 时多一个数据库服务风险太高。我们就用 SQLite 存当前状态，JSONL 留作事件审计。", "expected_kind": "decision", "expected_contains": ["SQLite", "PostgreSQL", "JSONL"]}
+{"id": "llm_risk_api_key_001", "input": "安全边界定一下：线上 API Key 绝对不能放浏览器里直连，必须服务端代理。这个风险三天后复查一次。", "expected_kind": "risk", "expected_contains": ["API Key", "服务端"]}
+{"id": "llm_workflow_export_001", "input": "飞书导出链路固定下来：先把项目群聊导出到云文档，再跑 normalize-chat-export，确认人名和时间戳没错，再跑 segment-chat-export。", "expected_kind": "workflow", "expected_contains": ["normalize-chat-export", "segment-chat-export"]}
+{"id": "llm_none_unresolved_001", "input": "PostgreSQL 会不会太重？这个还没定，今晚再讨论一下，先别写进方案。", "expected_kind": "none", "expected_contains": []}

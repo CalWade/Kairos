@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { extractDecisionWithLlm } from "../extractor/llmDecisionExtractor.js";
 import { extractDecisionBaseline } from "../extractor/ruleDecisionExtractor.js";
 import { extractionToMemoryAtom } from "../extractor/toMemoryAtom.js";
 import { createAtomFromFact, extractFacts, reconcileFact } from "../extractor/mockExtractor.js";
@@ -14,6 +15,22 @@ export type EvalResult = {
   failed: number;
   cases: Array<{ id: string; passed: boolean; reason?: string; actual?: unknown }>;
 };
+
+export async function runLlmDecisionExtractionEval(path = "eval/datasets/llm-decision-extraction.jsonl"): Promise<EvalResult> {
+  const cases = readJsonl<any>(path);
+  const results = [];
+  for (const item of cases) {
+    try {
+      const result = await extractDecisionWithLlmWithRetry(window(item.input));
+      const containsOk = (item.expected_contains ?? []).every((needle: string) => JSON.stringify(result).includes(needle));
+      const passed = result.kind === item.expected_kind && containsOk;
+      results.push({ id: item.id, passed, actual: result, reason: passed ? undefined : "LLM 抽取结果与期望不一致" });
+    } catch (error) {
+      results.push({ id: item.id, passed: false, reason: `LLM 调用失败：${String(error).slice(0, 200)}` });
+    }
+  }
+  return summarize("llm-decision-extraction", results);
+}
 
 export function runDecisionExtractionEval(path = "eval/datasets/decision-extraction.jsonl"): EvalResult {
   const cases = readJsonl<any>(path);
@@ -117,6 +134,15 @@ function window(text: string): CandidateWindow {
     dropped_message_ids: [],
     estimated_tokens: Math.ceil(text.length / 2),
   };
+}
+
+async function extractDecisionWithLlmWithRetry(candidate: CandidateWindow) {
+  try {
+    return await extractDecisionWithLlm(candidate, { fallback: false, timeoutMs: 60_000 });
+  } catch (error) {
+    if (!String(error).includes("AbortError") && !String(error).includes("aborted")) throw error;
+    return extractDecisionWithLlm(candidate, { fallback: false, timeoutMs: 90_000 });
+  }
 }
 
 function addDays(iso: string, days: number): string {

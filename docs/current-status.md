@@ -13,7 +13,7 @@
 - 飞书会话导出解析：`normalize-chat-export`
 - 候选片段 baseline：`segment-chat-export`
 - 结构化决策抽取 baseline：`extract-decision`
-- LLMDecisionExtractor 可选路径：`extract-decision --llm --fallback`，读取本地 `.env`，支持 OpenAI-compatible 接口
+- LLMDecisionExtractor 可选路径：`extract-decision --llm --fallback`，读取本地 `.env`，支持 OpenAI-compatible 接口；另有显式 `eval --suite llm-decision-extraction`，不进入 core eval
 - Decision Card 文本版：`decision-card <memory_id>`，可把决策、理由、被否方案和证据渲染为 Markdown
 - 飞书 Decision Card payload 预览：`decision-card <memory_id> --feishu-json`，只生成 interactive card JSON，不主动发送
 - Recall 确定性格式化回答：将最相关记忆整理为历史决策/风险/流程回答，并提示可运行的 decision-card 命令
@@ -23,7 +23,7 @@
 
 ## 真实边界
 
-- Decision Extractor 默认仍是规则 baseline；LLMDecisionExtractor 已有可选路径，但缺少大规模真实样本评测，不能按生产效果宣传。
+- Decision Extractor 默认仍是规则 baseline；LLMDecisionExtractor 已有可选路径和小型显式评测，当前观测 3/4 通过且存在超时样本，不能按生产效果宣传。
 - Candidate Segment Pipeline 仍是输入清洗 baseline，不应作为核心智能卖点。
 - 飞书接入目前依赖 OpenClaw 工具拉取/导出文档，Kairos CLI 尚未内置飞书 API OAuth 调用。
 - `recall` 目前是检索 + 确定性格式化回答，不是完整自然语言问答生成。
@@ -46,7 +46,7 @@ Kairos 当前聚焦：项目决策记忆引擎。
 
 ## 当前最重要缺口
 
-1. LLMDecisionExtractor：当前只有可选路径，下一步需要扩大真实样本评测、稳定 JSON schema 和失败回退策略。
+1. LLMDecisionExtractor：当前已有可选路径和小型显式评测，下一步需要扩大真实样本、优化超时/重试和失败回退策略。
 2. Remind / Forgetting：当前只有本地到期查询 MVP，仍需处理状态、重复提醒控制和飞书推送。
 3. Decision Card：CLI 文本版和飞书 payload 已完成，下一步是安全接入飞书推送。
 4. Benchmark 扩充：当前 core eval 为 26 个最小用例，仍需扩到可展示数据集。

@@ -153,3 +153,14 @@ npm run dev -- recall "为什么不用 PostgreSQL？" --project kairos --evidenc
 - 可继续运行的 `memoryops decision-card <memory_id>` 命令
 
 说明：当前是确定性格式化回答，不是 LLM 生成式 QA，因此更稳定，但表达能力有限。
+
+
+## LLM 抽取评测
+
+如需单独检查主办方模型在抽取任务上的表现：
+
+```bash
+npm run dev -- eval --suite llm-decision-extraction
+```
+
+该 suite 会调用外部 LLM，不进入 `eval --core`。当前它用于暴露 LLM 路径稳定性问题，例如超时、JSON 不稳定或抽取类型错误。

@@ -47,6 +47,8 @@ npm run dev -- schema:check
 # 加载 smoke benchmark 数据集
 npm run dev -- eval --smoke
 npm run dev -- eval --core
+# 显式运行 LLM 抽取评测（会调用外部模型，不进入 core eval）
+npm run dev -- eval --suite llm-decision-extraction
 
 # 一键本地端到端演示：抽取 → 召回 → 决策卡片 → 矛盾更新 → 到期提醒 → 评测
 npm run demo:e2e
@@ -73,7 +75,7 @@ npm run dev -- decision-card <memory_id>
 npm run dev -- decision-card <memory_id> --feishu-json
 ```
 
-> 注意：当前 `add / search / recall / list / history` 已接入本地 SQLite Store 与 JSONL Event Log；`recall` 已有确定性格式化回答，但不是完整生成式 QA；LLMDecisionExtractor 已有 OpenAI-compatible 可选路径，但仍需更多真实数据评测，不应把它宣传成生产级效果。
+> 注意：当前 `add / search / recall / list / history` 已接入本地 SQLite Store 与 JSONL Event Log；`recall` 已有确定性格式化回答，但不是完整生成式 QA；LLMDecisionExtractor 已有 OpenAI-compatible 可选路径，并提供显式 LLM eval；但仍需更多真实数据评测，不应把它宣传成生产级效果。
 
 ## 核心设计
 

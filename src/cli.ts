@@ -5,7 +5,7 @@ import { MemoryAtomSchema } from "./memory/schema.js";
 import { createManualMemory } from "./memory/factory.js";
 import { MemoryStore } from "./memory/store.js";
 import { loadSmokeCases, summarizeSmokeCases } from "./eval/smoke.js";
-import { runAllCoreEvals, runAntiInterferenceEval, runConflictUpdateEval, runDecisionExtractionEval, runRecallEval, runRemindEval } from "./eval/runner.js";
+import { runAllCoreEvals, runAntiInterferenceEval, runConflictUpdateEval, runDecisionExtractionEval, runLlmDecisionExtractionEval, runRecallEval, runRemindEval } from "./eval/runner.js";
 import { createAtomFromFact, extractFacts, reconcileFact } from "./extractor/mockExtractor.js";
 import { normalizeFeishuChatExport } from "./candidate/feishuChatExport.js";
 import { segmentMessages } from "./candidate/segment.js";
@@ -74,7 +74,7 @@ program
   .option("--doc-token <token>", "飞书文档 token")
   .option("--chat-id <chatId>", "原始会话 ID")
   .option("--max-gap-minutes <minutes>", "切分时间间隔", "15")
-  .action((opts) => {
+  .action(async (opts) => {
     const markdown = readFileSync(opts.file, "utf8");
     const messages = normalizeFeishuChatExport(markdown, {
       docToken: opts.docToken,
@@ -354,9 +354,9 @@ program
   .command("eval")
   .option("--smoke", "run smoke benchmark")
   .option("--core", "run core benchmark: decision extraction + conflict update + recall")
-  .option("--suite <suite>", "run a specific suite: decision-extraction | conflict-update | recall | anti-interference | remind")
+  .option("--suite <suite>", "run a specific suite: decision-extraction | conflict-update | recall | anti-interference | remind | llm-decision-extraction")
   .description("Run benchmarks")
-  .action((opts) => {
+  .action(async (opts) => {
     if (opts.smoke) {
       const cases = loadSmokeCases();
       console.log(JSON.stringify({ ok: true, command: "eval", smoke: true, ...summarizeSmokeCases(cases) }, null, 2));
@@ -378,7 +378,9 @@ program
               ? runAntiInterferenceEval()
               : opts.suite === "remind"
                 ? runRemindEval()
-                : undefined;
+                : opts.suite === "llm-decision-extraction"
+                  ? await runLlmDecisionExtractionEval()
+                  : undefined;
       if (!result) throw new Error(`未知 suite: ${opts.suite}`);
       console.log(JSON.stringify({ ok: true, command: "eval", result }, null, 2));
       return;
