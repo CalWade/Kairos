@@ -56,6 +56,10 @@ RISK_ID="$(printf '%s' "$RISK_JSON" | extract_json_field saved.id)"
 printf '写入风险记忆：%s\n' "$RISK_ID"
 run_json remind --project "$PROJECT" --now "2099-01-01T00:00:00.000Z" --db "$DB" --events "$EVENTS" \
   | node -e 'let s=""; process.stdin.on("data", d => s += d); process.stdin.on("end", () => { const j = JSON.parse(s); console.log(`到期提醒数：${j.total}`); for (const r of j.reminders) console.log(`${r.id}\t${r.subject}\t${r.review_at}`); });'
+run_json remind snooze "$RISK_ID" --until "2099-01-08T00:00:00.000Z" --db "$DB" --events "$EVENTS" >/dev/null
+echo "已延后提醒到：2099-01-08T00:00:00.000Z"
+run_json remind ack "$RISK_ID" --db "$DB" --events "$EVENTS" >/dev/null
+echo "已标记提醒处理完成，review_at 已清除"
 
 section "6. 核心评测"
 run_json eval --core \

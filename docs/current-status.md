@@ -27,7 +27,7 @@
 - Candidate Segment Pipeline 仍是输入清洗 baseline，不应作为核心智能卖点。
 - 飞书接入目前依赖 OpenClaw 工具拉取/导出文档，Kairos CLI 尚未内置飞书 API OAuth 调用。
 - `recall` 目前是检索 + 确定性格式化回答，不是完整自然语言问答生成。
-- 遗忘提醒 `remind` 已有本地 MVP：支持按 `review_at <= --now` 查询到期记忆；尚未实现飞书推送、处理状态和重复提醒控制。
+- 遗忘提醒 `remind` 已有本地 MVP：支持按 `review_at <= --now` 查询到期记忆，并支持 `ack` / `snooze`；尚未实现飞书推送和周期性自动投递。
 - 历史决策卡片已有 CLI 文本版和飞书 payload 生成；尚未实现飞书交互式卡片推送。
 
 ## 当前主线
@@ -47,7 +47,7 @@ Kairos 当前聚焦：项目决策记忆引擎。
 ## 当前最重要缺口
 
 1. LLMDecisionExtractor：当前已有可选路径和小型显式评测，下一步需要扩大真实样本、优化超时/重试和失败回退策略。
-2. Remind / Forgetting：当前只有本地到期查询 MVP，仍需处理状态、重复提醒控制和飞书推送。
+2. Remind / Forgetting：当前已有本地到期查询、ack、snooze；仍需飞书推送和周期性自动投递。
 3. Decision Card：CLI 文本版和飞书 payload 已完成，下一步是安全接入飞书推送。
 4. Benchmark 扩充：当前 core eval 为 26 个最小用例，仍需扩到可展示数据集。
 5. 飞书端演示闭环：至少完成导出文档 → CLI → recall 的稳定 demo。

@@ -174,6 +174,8 @@ memoryops search "数据库方案"
 memoryops recall "我们为什么不用 MongoDB？" --evidence
 memoryops history <atom_id>
 memoryops remind --project kairos --now 2026-05-30T00:00:00.000Z
+memoryops remind snooze <memory_id> --until 2026-06-01T00:00:00.000Z
+memoryops remind ack <memory_id>
 memoryops eval --smoke
 memoryops schema:check
 
@@ -244,7 +246,7 @@ memoryops/
 - [x] mock Extract / Reconcile 骨架
 - [x] 飞书会话导出文档标准化 POC
 - [x] 冲突更新
-- [x] Remind 本地 MVP：按 review_at 查询到期风险记忆
+- [x] Remind 本地 MVP：按 review_at 查询到期风险记忆，支持 ack / snooze
 - [ ] 飞书端提醒推送与提醒处理状态
 - [ ] 飞书交互式 Decision Card 推送（payload 已可生成，尚未发送）
 - [x] smoke benchmark 数据集草案

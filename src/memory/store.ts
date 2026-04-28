@@ -210,6 +210,57 @@ export class MemoryStore {
     return rows.map((row) => MemoryAtomSchema.parse(JSON.parse(row.atom_json)));
   }
 
+  ackReminder(id: string, options: { now?: string } = {}): MemoryAtom {
+    const atom = this.get(id);
+    if (!atom) throw new Error(`记忆不存在：${id}`);
+    const now = options.now ?? new Date().toISOString();
+    const updated: MemoryAtom = {
+      ...atom,
+      review_at: undefined,
+      metadata: {
+        ...(atom.metadata ?? {}),
+        reminder_state: "acked",
+        reminder_acked_at: now,
+      },
+    };
+    const saved = this.db.transaction(() => this.writeAtom(updated))();
+    this.eventLog.append({
+      event_id: makeMemoryId(`${id}|REMINDER_ACK|${now}`),
+      action: "UPDATE",
+      atom_id: id,
+      at: now,
+      atom: saved,
+      reason: "REMINDER_ACK",
+    });
+    return saved;
+  }
+
+  snoozeReminder(id: string, until: string, options: { now?: string } = {}): MemoryAtom {
+    const atom = this.get(id);
+    if (!atom) throw new Error(`记忆不存在：${id}`);
+    const now = options.now ?? new Date().toISOString();
+    const updated: MemoryAtom = {
+      ...atom,
+      review_at: until,
+      metadata: {
+        ...(atom.metadata ?? {}),
+        reminder_state: "snoozed",
+        reminder_snoozed_at: now,
+        reminder_snoozed_until: until,
+      },
+    };
+    const saved = this.db.transaction(() => this.writeAtom(updated))();
+    this.eventLog.append({
+      event_id: makeMemoryId(`${id}|REMINDER_SNOOZE|${until}|${now}`),
+      action: "UPDATE",
+      atom_id: id,
+      at: now,
+      atom: saved,
+      reason: `REMINDER_SNOOZE:${until}`,
+    });
+    return saved;
+  }
+
   dueReminders(options: ReminderOptions = {}): MemoryAtom[] {
     const filters = [`status = 'active'`, `review_at IS NOT NULL`, `review_at <= @now`];
     const params: Record<string, unknown> = {

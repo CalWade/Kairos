@@ -110,4 +110,41 @@ describe("MemoryStore", () => {
     expect(reminders[0].review_at).toBe("2026-05-01T00:00:00.000Z");
   }));
 
+
+  it("ackReminder 会清除 review_at 并让提醒不再到期", () => withStore((store) => {
+    const saved = store.upsert(createManualMemory({
+      text: "生产环境 API Key 不允许前端直连。",
+      project: "kairos",
+      type: "risk",
+      subject: "api_key_policy",
+      review_at: "2026-05-01T00:00:00.000Z",
+    }));
+
+    const acked = store.ackReminder(saved.id, { now: "2026-05-01T01:00:00.000Z" });
+    const reminders = store.dueReminders({ project: "kairos", now: "2026-05-02T00:00:00.000Z" });
+
+    expect(acked.review_at).toBeUndefined();
+    expect(acked.metadata?.reminder_state).toBe("acked");
+    expect(reminders).toHaveLength(0);
+  }));
+
+  it("snoozeReminder 会移动 review_at", () => withStore((store) => {
+    const saved = store.upsert(createManualMemory({
+      text: "预览 PDF 乱码风险需要复查。",
+      project: "kairos",
+      type: "risk",
+      subject: "preview_independent_ip_requirement",
+      review_at: "2026-05-01T00:00:00.000Z",
+    }));
+
+    const snoozed = store.snoozeReminder(saved.id, "2026-05-03T00:00:00.000Z", { now: "2026-05-01T01:00:00.000Z" });
+    const before = store.dueReminders({ project: "kairos", now: "2026-05-02T00:00:00.000Z" });
+    const after = store.dueReminders({ project: "kairos", now: "2026-05-03T00:00:00.000Z" });
+
+    expect(snoozed.review_at).toBe("2026-05-03T00:00:00.000Z");
+    expect(snoozed.metadata?.reminder_state).toBe("snoozed");
+    expect(before).toHaveLength(0);
+    expect(after).toHaveLength(1);
+  }));
+
 });

@@ -315,15 +315,19 @@ program
     console.log(JSON.stringify({ ok: !!atom, command: "history", atom }, null, 2));
   });
 
-program
+const remind = program
   .command("remind")
+  .description("管理 review_at 到期提醒（本地 MVP，不做推送）");
+
+remind
+  .command("list", { isDefault: true })
   .option("--now <time>", "mock current time, ISO 8601")
   .option("--project <project>", "项目名")
   .option("--type <type>", "记忆类型，默认不过滤")
   .option("--limit <limit>", "返回数量", "20")
   .option("--db <path>", "SQLite 数据库路径")
   .option("--events <path>", "JSONL event log 路径")
-  .description("列出 review_at 已到期的记忆提醒（MVP，本地查询，不做推送）")
+  .description("列出 review_at 已到期的记忆提醒")
   .action((opts) => {
     const now = opts.now ?? new Date().toISOString();
     const reminders = storeFromOptions(opts).dueReminders({
@@ -348,6 +352,31 @@ program
         source: item.source,
       })),
     }, null, 2));
+  });
+
+remind
+  .command("ack")
+  .argument("<atomId>")
+  .option("--now <time>", "mock current time, ISO 8601")
+  .option("--db <path>", "SQLite 数据库路径")
+  .option("--events <path>", "JSONL event log 路径")
+  .description("标记一条提醒已处理，并清除 review_at")
+  .action((atomId, opts) => {
+    const atom = storeFromOptions(opts).ackReminder(atomId, { now: opts.now });
+    console.log(JSON.stringify({ ok: true, command: "remind ack", atom }, null, 2));
+  });
+
+remind
+  .command("snooze")
+  .argument("<atomId>")
+  .requiredOption("--until <time>", "新的 review_at，ISO 8601")
+  .option("--now <time>", "mock current time, ISO 8601")
+  .option("--db <path>", "SQLite 数据库路径")
+  .option("--events <path>", "JSONL event log 路径")
+  .description("稍后提醒：把 review_at 改到指定时间")
+  .action((atomId, opts) => {
+    const atom = storeFromOptions(opts).snoozeReminder(atomId, opts.until, { now: opts.now });
+    console.log(JSON.stringify({ ok: true, command: "remind snooze", atom }, null, 2));
   });
 
 program

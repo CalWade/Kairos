@@ -14,7 +14,7 @@ npm run demo:e2e
 2. 召回“为什么不用 PostgreSQL？”；
 3. 输出历史决策卡片；
 4. 演示周报接收人从 Alice 被 Bob 替代；
-5. 写入风险记忆并查询到期提醒；
+5. 写入风险记忆、查询到期提醒，并演示 snooze / ack；
 6. 运行核心评测。
 
 说明：这是本地 CLI 可运行闭环；飞书交互式卡片和提醒推送尚未实现。
@@ -164,3 +164,14 @@ npm run dev -- eval --suite llm-decision-extraction
 ```
 
 该 suite 会调用外部 LLM，不进入 `eval --core`。当前它用于暴露 LLM 路径稳定性问题，例如超时、JSON 不稳定或抽取类型错误。
+
+
+## Remind 生命周期演示
+
+```bash
+npm run dev -- remind --project kairos --now 2026-05-30T00:00:00.000Z
+npm run dev -- remind snooze <memory_id> --until 2026-06-01T00:00:00.000Z
+npm run dev -- remind ack <memory_id>
+```
+
+说明：当前是本地提醒生命周期 MVP；`ack` 会清除 `review_at`，`snooze` 会把 `review_at` 移动到指定时间。飞书推送和周期性自动投递尚未实现。
