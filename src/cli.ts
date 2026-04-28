@@ -14,7 +14,7 @@ import { buildCandidateWindows } from "./candidate/window.js";
 import { extractDecisionBaseline } from "./extractor/ruleDecisionExtractor.js";
 import { extractDecisionWithLlm } from "./extractor/llmDecisionExtractor.js";
 import { extractionToMemoryAtom } from "./extractor/toMemoryAtom.js";
-import { buildDecisionCard, renderDecisionCardMarkdown } from "./memory/decisionCard.js";
+import { buildDecisionCard, renderDecisionCardFeishuPayload, renderDecisionCardMarkdown } from "./memory/decisionCard.js";
 import { formatRecallAnswer } from "./memory/recallFormatter.js";
 
 const program = new Command();
@@ -261,6 +261,7 @@ program
   .argument("<atomId>")
   .description("输出历史决策卡片文本（Markdown），用于 CLI/飞书卡片前的稳定展示层")
   .option("--json", "输出结构化 JSON，而不是 Markdown")
+  .option("--feishu-json", "输出飞书 interactive card payload JSON（仅生成，不发送）")
   .option("--db <path>", "SQLite 数据库路径")
   .option("--events <path>", "JSONL event log 路径")
   .action((atomId, opts) => {
@@ -271,6 +272,10 @@ program
       return;
     }
     const card = buildDecisionCard(atom);
+    if (opts.feishuJson) {
+      console.log(JSON.stringify({ ok: true, command: "decision-card", card: renderDecisionCardFeishuPayload(card) }, null, 2));
+      return;
+    }
     if (opts.json) {
       console.log(JSON.stringify({ ok: true, command: "decision-card", card }, null, 2));
       return;

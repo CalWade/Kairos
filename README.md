@@ -69,6 +69,8 @@ npm run dev -- extract-decision --llm --fallback --text "最终决定 MVP 阶段
 npm run dev -- recall "为什么不用 PostgreSQL？" --project kairos --evidence
 # 根据记忆 ID 输出历史决策卡片文本
 npm run dev -- decision-card <memory_id>
+# 预览飞书 interactive card payload（只生成 JSON，不发送）
+npm run dev -- decision-card <memory_id> --feishu-json
 ```
 
 > 注意：当前 `add / search / recall / list / history` 已接入本地 SQLite Store 与 JSONL Event Log；`recall` 已有确定性格式化回答，但不是完整生成式 QA；LLMDecisionExtractor 已有 OpenAI-compatible 可选路径，但仍需更多真实数据评测，不应把它宣传成生产级效果。
@@ -225,6 +227,7 @@ memoryops/
 - [x] LLMDecisionExtractor 可选路径：读取本地 `.env`，支持 OpenAI-compatible chat completions 与 baseline fallback
 - [x] DecisionCandidate 写入 MemoryAtom 并支持反向召回
 - [x] Decision Card 文本版：`memoryops decision-card <memory_id>`
+- [x] 飞书 Decision Card payload 预览：`memoryops decision-card <memory_id> --feishu-json`
 - [x] Recall 确定性格式化回答：把决策、理由、被否方案和卡片命令组织为可读答案
 - [x] 核心评测 runner：决策抽取 / 矛盾更新 / 召回 / 抗干扰 / 到期提醒
 
@@ -241,7 +244,7 @@ memoryops/
 - [x] 冲突更新
 - [x] Remind 本地 MVP：按 review_at 查询到期风险记忆
 - [ ] 飞书端提醒推送与提醒处理状态
-- [ ] 飞书交互式 Decision Card 推送
+- [ ] 飞书交互式 Decision Card 推送（payload 已可生成，尚未发送）
 - [x] smoke benchmark 数据集草案
 - [ ] Demo 录屏
 

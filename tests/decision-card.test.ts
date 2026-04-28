@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MemoryAtom } from "../src/memory/atom.js";
-import { buildDecisionCard, renderDecisionCardMarkdown } from "../src/memory/decisionCard.js";
+import { buildDecisionCard, renderDecisionCardFeishuPayload, renderDecisionCardMarkdown } from "../src/memory/decisionCard.js";
 import { createManualMemory } from "../src/memory/factory.js";
 
 describe("Decision Card", () => {
@@ -41,6 +41,12 @@ describe("Decision Card", () => {
     expect(markdown).toContain("### 被否方案");
     expect(markdown).toContain("PostgreSQL：部署成本太高");
     expect(markdown).toContain("摘录：最终决定 MVP 阶段使用 SQLite");
+
+    const payload = renderDecisionCardFeishuPayload(card);
+    expect(payload.header.title.content).toContain("local_storage_selection");
+    expect(payload.header.template).toBe("blue");
+    expect(JSON.stringify(payload)).toContain("被否方案");
+    expect(JSON.stringify(payload)).toContain(atom.id);
   });
 
   it("没有 raw_extraction 时从 content 兜底生成卡片", () => {

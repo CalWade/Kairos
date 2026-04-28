@@ -109,6 +109,52 @@ export function renderDecisionCardMarkdown(card: DecisionCard): string {
   return lines.join("\n");
 }
 
+
+export type FeishuCardPayload = {
+  config: { wide_screen_mode: boolean };
+  header: {
+    title: { tag: "plain_text"; content: string };
+    template: "blue" | "green" | "orange" | "red" | "grey";
+  };
+  elements: Array<Record<string, unknown>>;
+};
+
+export function renderDecisionCardFeishuPayload(card: DecisionCard): FeishuCardPayload {
+  const elements: Array<Record<string, unknown>> = [
+    markdown(`**状态**：${statusLabel(card.status)}\n**主题**：${card.subject}${card.stage ? `\n**阶段**：${card.stage}` : ""}`),
+    markdown(`**决策**\n${card.decision}`),
+  ];
+  if (card.conclusion && card.conclusion !== card.decision) elements.push(markdown(`**结论**\n${card.conclusion}`));
+  if (card.reasons.length) elements.push(markdown(`**理由**\n${card.reasons.map((item) => `- ${item}`).join("\n")}`));
+  if (card.rejected_options.length) {
+    elements.push(markdown(`**被否方案**\n${card.rejected_options.map((item) => `- ${item.option}：${item.reason}`).join("\n")}`));
+  }
+  if (card.opposition.length) {
+    elements.push(markdown(`**反对 / 顾虑**\n${card.opposition.map((item) => `- ${item.speaker ? `${item.speaker}：` : ""}${item.content}`).join("\n")}`));
+  }
+  elements.push(markdown(`**证据**\n来源：${card.evidence.channel}/${card.evidence.source_type}${card.evidence.chunk_ids?.length ? `\n片段：${card.evidence.chunk_ids.join(", ")}` : ""}\n摘录：${truncate(card.evidence.excerpt, 600)}`));
+  elements.push({
+    tag: "note",
+    elements: [{ tag: "plain_text", content: `Memory ID: ${card.id}` }],
+  });
+  return {
+    config: { wide_screen_mode: true },
+    header: {
+      title: { tag: "plain_text", content: card.title },
+      template: card.status === "active" ? "blue" : "grey",
+    },
+    elements,
+  };
+}
+
+function markdown(content: string): Record<string, unknown> {
+  return { tag: "markdown", content };
+}
+
+function truncate(value: string, max: number): string {
+  return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
+}
+
 function getRawDecision(atom: MemoryAtom): RawDecision | undefined {
   const raw = atom.metadata?.raw_extraction;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;

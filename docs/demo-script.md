@@ -119,6 +119,8 @@ npm run dev -- extract-decision \
 
 ```bash
 npm run dev -- decision-card <memory_id>
+# 只预览飞书 interactive card payload，不发送
+npm run dev -- decision-card <memory_id> --feishu-json
 ```
 
 输出会包含：
@@ -130,7 +132,7 @@ npm run dev -- decision-card <memory_id>
 - 反对 / 顾虑
 - 证据摘录
 
-说明：当前是 CLI Markdown 文本版，适合作为飞书交互式卡片的稳定内容层；飞书卡片推送尚未实现。
+说明：当前已有 CLI Markdown 文本版和飞书 interactive card payload 预览；飞书卡片推送尚未实现。
 
 
 ## Recall 格式化回答演示
