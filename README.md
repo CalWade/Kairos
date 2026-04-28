@@ -68,7 +68,7 @@ npm run dev -- recall "为什么不用 PostgreSQL？" --project kairos --evidenc
 npm run dev -- decision-card <memory_id>
 ```
 
-> 注意：当前 `add / search / recall / list / history` 已接入本地 SQLite Store 与 JSONL Event Log；LLMDecisionExtractor 已有 OpenAI-compatible 可选路径，但仍需更多真实数据评测，不应把它宣传成生产级效果。
+> 注意：当前 `add / search / recall / list / history` 已接入本地 SQLite Store 与 JSONL Event Log；`recall` 已有确定性格式化回答，但不是完整生成式 QA；LLMDecisionExtractor 已有 OpenAI-compatible 可选路径，但仍需更多真实数据评测，不应把它宣传成生产级效果。
 
 ## 核心设计
 
@@ -222,6 +222,7 @@ memoryops/
 - [x] LLMDecisionExtractor 可选路径：读取本地 `.env`，支持 OpenAI-compatible chat completions 与 baseline fallback
 - [x] DecisionCandidate 写入 MemoryAtom 并支持反向召回
 - [x] Decision Card 文本版：`memoryops decision-card <memory_id>`
+- [x] Recall 确定性格式化回答：把决策、理由、被否方案和卡片命令组织为可读答案
 - [x] 核心评测 runner：决策抽取 / 矛盾更新 / 召回 / 抗干扰 / 到期提醒
 
 - [x] 项目方向确定

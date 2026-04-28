@@ -15,6 +15,7 @@
 - 结构化决策抽取 baseline：`extract-decision`
 - LLMDecisionExtractor 可选路径：`extract-decision --llm --fallback`，读取本地 `.env`，支持 OpenAI-compatible 接口
 - Decision Card 文本版：`decision-card <memory_id>`，可把决策、理由、被否方案和证据渲染为 Markdown
+- Recall 确定性格式化回答：将最相关记忆整理为历史决策/风险/流程回答，并提示可运行的 decision-card 命令
 - DecisionCandidate → MemoryAtom 写入
 - 核心评测 runner：decision-extraction / conflict-update / recall / anti-interference / remind
 - Vitest 单元测试
@@ -24,7 +25,7 @@
 - Decision Extractor 默认仍是规则 baseline；LLMDecisionExtractor 已有可选路径，但缺少大规模真实样本评测，不能按生产效果宣传。
 - Candidate Segment Pipeline 仍是输入清洗 baseline，不应作为核心智能卖点。
 - 飞书接入目前依赖 OpenClaw 工具拉取/导出文档，Kairos CLI 尚未内置飞书 API OAuth 调用。
-- `recall` 目前是检索式回答，不是完整自然语言问答生成。
+- `recall` 目前是检索 + 确定性格式化回答，不是完整自然语言问答生成。
 - 遗忘提醒 `remind` 已有本地 MVP：支持按 `review_at <= --now` 查询到期记忆；尚未实现飞书推送、处理状态和重复提醒控制。
 - 历史决策卡片已有 CLI 文本版；尚未实现飞书交互式卡片推送。
 

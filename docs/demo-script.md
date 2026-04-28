@@ -110,3 +110,23 @@ npm run dev -- decision-card <memory_id>
 - 证据摘录
 
 说明：当前是 CLI Markdown 文本版，适合作为飞书交互式卡片的稳定内容层；飞书卡片推送尚未实现。
+
+
+## Recall 格式化回答演示
+
+写入决策记忆后运行：
+
+```bash
+npm run dev -- recall "为什么不用 PostgreSQL？" --project kairos --evidence
+```
+
+期望回答包含：
+
+- 历史决策
+- 理由
+- 被否方案
+- 当前状态
+- 记忆 ID
+- 可继续运行的 `memoryops decision-card <memory_id>` 命令
+
+说明：当前是确定性格式化回答，不是 LLM 生成式 QA，因此更稳定，但表达能力有限。

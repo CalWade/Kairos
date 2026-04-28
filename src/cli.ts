@@ -15,6 +15,7 @@ import { extractDecisionBaseline } from "./extractor/ruleDecisionExtractor.js";
 import { extractDecisionWithLlm } from "./extractor/llmDecisionExtractor.js";
 import { extractionToMemoryAtom } from "./extractor/toMemoryAtom.js";
 import { buildDecisionCard, renderDecisionCardMarkdown } from "./memory/decisionCard.js";
+import { formatRecallAnswer } from "./memory/recallFormatter.js";
 
 const program = new Command();
 
@@ -238,9 +239,7 @@ program
       project: opts.project,
       limit: 5,
     });
-    const answer = results.length
-      ? `找到 ${results.length} 条相关记忆。最相关：${results[0].content}`
-      : "没有找到相关记忆。";
+    const answer = formatRecallAnswer(query, results);
     console.log(JSON.stringify({
       ok: true,
       command: "recall",
