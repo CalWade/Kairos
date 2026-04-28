@@ -58,6 +58,7 @@ npm run dev -- search "周报" --project kairos --include-history
 
 # 验证飞书会话导出文档标准化
 npm run dev -- normalize-chat-export --file /tmp/feishu-chat-export.md --doc-token <doc_token>
+npm run dev -- segment-chat-export --file /tmp/feishu-chat-export.md --doc-token <doc_token>
 ```
 
 > 注意：当前 `add / search / recall / list / history` 已接入本地 SQLite Store 与 JSONL Event Log；LLM 两阶段抽取仍在开发中。
@@ -207,6 +208,7 @@ memoryops/
 ## 当前进度
 
 - [x] Candidate Segment Pipeline 第一步：Message Normalization 标准消息结构
+- [x] Candidate Segment Pipeline 第二步：Conversation Segmentation 对话切分
 
 - [x] 项目方向确定
 - [x] GitHub 仓库初始化

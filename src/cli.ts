@@ -7,6 +7,7 @@ import { MemoryStore } from "./memory/store.js";
 import { loadSmokeCases, summarizeSmokeCases } from "./eval/smoke.js";
 import { createAtomFromFact, extractFacts, reconcileFact } from "./extractor/mockExtractor.js";
 import { normalizeFeishuChatExport } from "./candidate/feishuChatExport.js";
+import { segmentMessages } from "./candidate/segment.js";
 
 const program = new Command();
 
@@ -21,6 +22,40 @@ function storeFromOptions(opts: { db?: string; events?: string }) {
 
 
 
+
+
+program
+  .command("segment-chat-export")
+  .description("将飞书会话导出 Markdown 标准化并切分为 topic-coherent segments")
+  .requiredOption("--file <path>", "Markdown 文件路径")
+  .option("--doc-token <token>", "飞书文档 token")
+  .option("--chat-id <chatId>", "原始会话 ID")
+  .option("--max-gap-minutes <minutes>", "切分时间间隔", "15")
+  .action((opts) => {
+    const markdown = readFileSync(opts.file, "utf8");
+    const messages = normalizeFeishuChatExport(markdown, {
+      docToken: opts.docToken,
+      chatId: opts.chatId,
+    });
+    const segments = segmentMessages(messages, {
+      maxGapMs: Number(opts.maxGapMinutes) * 60 * 1000,
+    });
+    console.log(JSON.stringify({
+      ok: true,
+      command: "segment-chat-export",
+      message_total: messages.length,
+      segment_total: segments.length,
+      segments: segments.map((segment) => ({
+        id: segment.id,
+        topic_hint: segment.topic_hint,
+        message_count: segment.messages.length,
+        boundary_reasons: segment.boundary_reasons,
+        start_time: segment.start_time,
+        end_time: segment.end_time,
+        preview: segment.messages.map((message) => `${message.sender}: ${message.text}`).slice(0, 8),
+      })),
+    }, null, 2));
+  });
 
 program
   .command("normalize-chat-export")
