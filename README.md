@@ -47,6 +47,8 @@ npm run dev -- schema:check
 # 加载 smoke benchmark 数据集
 npm run dev -- eval --smoke
 npm run dev -- eval --core
+# 单独运行飞书工作流触发评测
+npm run dev -- eval --suite feishu-workflow
 # 显式运行 LLM 抽取评测（会调用外部模型，不进入 core eval）
 npm run dev -- eval --suite llm-decision-extraction
 

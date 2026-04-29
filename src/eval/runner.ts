@@ -6,6 +6,7 @@ import { extractDecisionBaseline } from "../extractor/ruleDecisionExtractor.js";
 import { extractionToMemoryAtom } from "../extractor/toMemoryAtom.js";
 import { createAtomFromFact, extractFacts, reconcileFact } from "../extractor/mockExtractor.js";
 import { MemoryStore } from "../memory/store.js";
+import { runFeishuWorkflow } from "../workflow/feishuWorkflow.js";
 import type { CandidateWindow } from "../candidate/window.js";
 
 export type EvalResult = {
@@ -103,6 +104,23 @@ export function runRemindEval(path = "eval/datasets/remind.jsonl"): EvalResult {
   return summarize("remind", results);
 }
 
+export function runFeishuWorkflowEval(path = "eval/datasets/feishu-workflow.jsonl"): EvalResult {
+  const cases = readJsonl<any>(path);
+  const results = cases.map((item) => withTempStore((store) => {
+    for (const memory of item.memories ?? []) {
+      const extraction = extractDecisionBaseline(window(memory));
+      const atom = extractionToMemoryAtom(extraction, window(memory), "kairos");
+      if (atom) store.upsert(atom);
+    }
+    const actual = runFeishuWorkflow(store, { project: "kairos", text: item.message });
+    const actionOk = actual.action === item.expected_action;
+    const containsOk = (item.expected_contains ?? []).every((needle: string) => JSON.stringify(actual).includes(needle));
+    const passed = actionOk && containsOk;
+    return { id: item.id, passed, actual, reason: passed ? undefined : "飞书工作流动作或内容不符合期望" };
+  }));
+  return summarize("feishu-workflow", results);
+}
+
 export function runRecallEval(path = "eval/datasets/recall.jsonl"): EvalResult {
   const cases = readJsonl<any>(path);
   const results = cases.map((item) => withTempStore((store) => {
@@ -118,7 +136,7 @@ export function runRecallEval(path = "eval/datasets/recall.jsonl"): EvalResult {
 }
 
 export function runAllCoreEvals(): EvalResult[] {
-  return [runDecisionExtractionEval(), runConflictUpdateEval(), runRecallEval(), runAntiInterferenceEval(), runRemindEval()];
+  return [runDecisionExtractionEval(), runConflictUpdateEval(), runRecallEval(), runAntiInterferenceEval(), runRemindEval(), runFeishuWorkflowEval()];
 }
 
 function window(text: string): CandidateWindow {

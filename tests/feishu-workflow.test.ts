@@ -46,6 +46,11 @@ describe("runFeishuWorkflow", () => {
     expect(result.action).toBe("ignore");
   }));
 
+  it("OpenClaw 斜杠命令不进入记忆工作流", () => withStore((store) => {
+    const result = runFeishuWorkflow(store, { project: "kairos", text: "/model" });
+    expect(result.action).toBe("ignore");
+  }));
+
   it("低价值闲聊不触发", () => withStore((store) => {
     const result = runFeishuWorkflow(store, { project: "kairos", text: "收到" });
     expect(result.action).toBe("ignore");

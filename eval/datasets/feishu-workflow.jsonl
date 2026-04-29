@@ -1,0 +1,4 @@
+{"id": "workflow_postgres_trigger_001", "memories": ["张三：最终决定 MVP 阶段使用 SQLite 作为当前状态库，同时保留 JSONL Event Log。王五：PostgreSQL 对复赛 demo 来说部署成本太高，容易让评委跑不起来。"], "message": "要不我们还是用 PostgreSQL？", "expected_action": "push_decision_card", "expected_contains": ["PostgreSQL", "SQLite"]}
+{"id": "workflow_hooks_question_ignore_001", "memories": ["张三：最终决定 MVP 阶段使用 SQLite 作为当前状态库，同时保留 JSONL Event Log。王五：PostgreSQL 对复赛 demo 来说部署成本太高，容易让评委跑不起来。"], "message": "hooks 的正确安装和配置方案是不是可以确定了？", "expected_action": "ignore"}
+{"id": "workflow_slash_command_ignore_001", "memories": ["生产环境不允许前端直连 API Key，必须走服务端代理，否则密钥泄露风险太高。"], "message": "/model", "expected_action": "ignore"}
+{"id": "workflow_noise_ignore_001", "memories": [], "message": "收到", "expected_action": "ignore"}

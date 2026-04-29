@@ -11,3 +11,14 @@ describe("llm eval dataset", () => {
     expect(cases.some((item) => item.input.includes("normalize-chat-export"))).toBe(true);
   });
 });
+
+
+describe("feishu workflow eval dataset", () => {
+  it("覆盖触发、误触发和斜杠命令", () => {
+    const lines = readFileSync("eval/datasets/feishu-workflow.jsonl", "utf8").trim().split("\n");
+    const cases = lines.map((line) => JSON.parse(line));
+    expect(cases.some((item) => item.expected_action === "push_decision_card")).toBe(true);
+    expect(cases.some((item) => item.message.includes("hooks"))).toBe(true);
+    expect(cases.some((item) => item.message.startsWith("/"))).toBe(true);
+  });
+});

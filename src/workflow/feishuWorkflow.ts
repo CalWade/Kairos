@@ -24,9 +24,10 @@ export type FeishuWorkflowOutput = {
 export function runFeishuWorkflow(store: MemoryStore, input: FeishuWorkflowInput): FeishuWorkflowOutput {
   const query = input.text.trim();
   if (!query) return ignore(query, "空消息");
+  if (isSlashCommand(query)) return ignore(query, "OpenClaw/聊天命令不进入记忆工作流");
   if (isLikelyNoise(query)) return ignore(query, "低价值闲聊/确认消息");
 
-  const hits = store.search(query, { project: input.project, limit: 5 });
+  const hits = safeSearch(store, query, { project: input.project, limit: 5 });
   if (hits.length === 0) return ignore(query, "未命中相关记忆");
 
   const top = hits[0];
@@ -64,6 +65,18 @@ export function runFeishuWorkflow(store: MemoryStore, input: FeishuWorkflowInput
 
 function ignore(query: string, reason: string): FeishuWorkflowOutput {
   return { ok: true, action: "ignore", reason, query };
+}
+
+function safeSearch(store: MemoryStore, query: string, options: { project?: string; limit: number }): MemoryAtom[] {
+  try {
+    return store.search(query, options);
+  } catch {
+    return [];
+  }
+}
+
+function isSlashCommand(text: string): boolean {
+  return /^\/[A-Za-z][A-Za-z0-9_-]*(?:\s|$)/.test(text.trim());
 }
 
 function isLikelyNoise(text: string): boolean {

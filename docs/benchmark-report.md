@@ -6,9 +6,11 @@
 
 ```bash
 npm run dev -- eval --core
+# 单独运行飞书工作流触发评测
+npm run dev -- eval --suite feishu-workflow
 ```
 
-当前包含 5 个 suite：
+当前包含 6 个 suite：
 
 | Suite | 目标 | Case 数 |
 |---|---|---:|
@@ -17,6 +19,7 @@ npm run dev -- eval --core
 | recall | 验证反向问题能否召回决策理由、风险和流程 | 5 |
 | anti-interference | 验证多条相似记忆下不召回错误对象 | 3 |
 | remind | 验证风险记忆 review_at 到期提醒 | 2 |
+| feishu-workflow | 验证飞书消息触发/误触发控制/斜杠命令忽略 | 4 |
 
 ## 2. 当前结果
 
@@ -28,9 +31,10 @@ conflict-update: 4 / 4 passed
 recall: 5 / 5 passed
 anti-interference: 3 / 3 passed
 remind: 2 / 2 passed
+feishu-workflow: 4 / 4 passed
 ```
 
-这说明核心链路已经覆盖到 26 个最小评测用例，但仍然是小规模、人工构造数据集，不能说明系统已经具备真实生产效果。
+这说明核心链路已经覆盖到 30 个最小评测用例，但仍然是小规模、人工构造数据集，不能说明系统已经具备真实生产效果。
 
 ## 3. 已覆盖能力
 

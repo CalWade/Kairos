@@ -19,7 +19,7 @@
 - 飞书 Decision Card payload 预览：`decision-card <memory_id> --feishu-json`，只生成 interactive card JSON；另支持 `--send-feishu-webhook` 通过飞书机器人 webhook 真实发送，必须显式提供 webhook
 - Recall 确定性格式化回答：将最相关记忆整理为历史决策/风险/流程回答，并提示可运行的 decision-card 命令
 - DecisionCandidate → MemoryAtom 写入
-- 核心评测 runner：decision-extraction / conflict-update / recall / anti-interference / remind
+- 核心评测 runner：decision-extraction / conflict-update / recall / anti-interference / remind / feishu-workflow
 - Vitest 单元测试
 
 ## 真实边界
@@ -50,5 +50,5 @@ Kairos 当前聚焦：项目决策记忆引擎。
 1. LLMDecisionExtractor：当前已有可选路径和小型显式评测，下一步需要扩大真实样本、优化超时/重试和失败回退策略。
 2. Remind / Forgetting：当前已有本地到期查询、ack、snooze；仍需飞书推送和周期性自动投递。
 3. Decision Card：CLI 文本版、飞书 payload 和 webhook 发送路径已完成；下一步是接入 OAuth 或 OpenClaw 演示流。
-4. Benchmark 扩充：当前 core eval 为 26 个最小用例，仍需扩到可展示数据集。
+4. Benchmark 扩充：当前 core eval 为 30 个最小用例，仍需扩到可展示数据集。
 5. 飞书端演示闭环：至少完成导出文档 → CLI → recall 的稳定 demo。
