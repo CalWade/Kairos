@@ -2,7 +2,7 @@ import { appendFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const handler = async (event: any) => {
+const handler = async (event) => {
   if (event?.type !== "message" || event?.action !== "received") return;
   const context = event.context ?? {};
   const workspaceDir = context.workspaceDir ?? process.cwd();
@@ -26,6 +26,7 @@ const handler = async (event: any) => {
   if (!text) return;
 
   try {
+    ensureBuilt(repoDir);
     const [{ MemoryStore }, { runFeishuWorkflow }, { sendFeishuInteractiveWebhook, redactWebhookUrl }, { loadEnvValue }] = await Promise.all([
       importFromRepo(repoDir, "dist/memory/store.js"),
       importFromRepo(repoDir, "dist/workflow/feishuWorkflow.js"),
@@ -34,8 +35,8 @@ const handler = async (event: any) => {
     ]);
     const store = new MemoryStore(resolve(repoDir, "data/memory.db"), resolve(repoDir, "data/memory_events.jsonl"));
     const output = runFeishuWorkflow(store, { text, project: process.env.KAIROS_PROJECT ?? "kairos" });
-    let sent: unknown;
-    let webhook: string | undefined;
+    let sent;
+    let webhook;
     if (process.env.KAIROS_HOOK_SEND_FEISHU === "1" && output.action === "push_decision_card" && output.card) {
       const webhookUrl = process.env.KAIROS_FEISHU_WEBHOOK_URL ?? loadEnvValue("KAIROS_FEISHU_WEBHOOK_URL", resolve(repoDir, ".env"));
       if (!webhookUrl) throw new Error("KAIROS_HOOK_SEND_FEISHU=1 but KAIROS_FEISHU_WEBHOOK_URL is missing");
@@ -60,17 +61,30 @@ const handler = async (event: any) => {
   }
 };
 
-function importFromRepo(repoDir: string, relativePath: string) {
+function importFromRepo(repoDir, relativePath) {
   return import(pathToFileURL(resolve(repoDir, relativePath)).href);
 }
 
-function log(repoDir: string, item: unknown) {
+function log(repoDir, item) {
   const path = resolve(repoDir, "runs/kairos-feishu-ingress.jsonl");
   mkdirSync(dirname(path), { recursive: true });
   appendFileSync(path, `${JSON.stringify(item)}\n`);
 }
 
-function resolveRepoDir(workspaceDir: string): string {
+function ensureBuilt(repoDir) {
+  const required = [
+    "dist/memory/store.js",
+    "dist/workflow/feishuWorkflow.js",
+    "dist/feishuWebhook.js",
+    "dist/llm/config.js",
+  ];
+  const missing = required.filter((item) => !existsSync(resolve(repoDir, item)));
+  if (missing.length > 0) {
+    throw new Error(`Kairos dist/ is missing required files: ${missing.join(", ")}. Run \`npm run build\` before linking, or install a packaged release built by \`npm pack\`.`);
+  }
+}
+
+function resolveRepoDir(workspaceDir) {
   if (process.env.KAIROS_REPO_DIR) return process.env.KAIROS_REPO_DIR;
   const hookDir = dirname(fileURLToPath(import.meta.url));
   const packageRootFromHook = resolve(hookDir, "../..");
@@ -83,7 +97,7 @@ function resolveRepoDir(workspaceDir: string): string {
     process.cwd(),
   ];
   for (const candidate of candidates) {
-    if (existsSync(resolve(candidate, "package.json")) && existsSync(resolve(candidate, "dist/cli.js"))) return candidate;
+    if (existsSync(resolve(candidate, "package.json"))) return candidate;
   }
   return packageRootFromHook;
 }

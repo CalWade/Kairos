@@ -55,6 +55,16 @@ openclaw hooks enable kairos-feishu-ingress
 openclaw gateway restart
 ```
 
+`package.json` 中配置了 `prepack: npm run build` 和 `files: ["dist", "hooks", ...]`，因此发布/打包产物会包含已编译的 `dist/`。用户通过 `.tgz` 安装时不需要再手动运行 `npm run build`。
+
+开发机使用 `openclaw plugins install -l .` 时，仍建议在改动源码后先运行：
+
+```bash
+npm run build
+```
+
+否则 linked hook 会明确报错：`Kairos dist/ is missing required files`。
+
 ## 环境变量
 
 默认只记录 workflow 输出，不自动发飞书卡片：
@@ -106,5 +116,6 @@ tail -f runs/kairos-feishu-ingress.jsonl
 ## 当前边界
 
 - Hook 已能接收 OpenClaw 的 `message:received` 事件并调用 Kairos。
+- 打包分发包包含 `dist/`，避免用户安装后再手动 build。
 - 默认不发送，避免刷群；发送必须显式开启环境变量。
 - 该方案不内置飞书 OAuth，不自建公网事件服务器。

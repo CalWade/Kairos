@@ -12,7 +12,8 @@
     "test": "vitest",
     "eval:smoke": "tsx src/cli.ts eval --smoke",
     "demo:e2e": "bash scripts/demo-e2e.sh",
-    "demo:feishu-workflow": "bash scripts/demo-feishu-workflow.sh"
+    "demo:feishu-workflow": "bash scripts/demo-feishu-workflow.sh",
+    "prepack": "npm run build"
   },
   "keywords": [
     "memory",
@@ -39,5 +40,12 @@
     "hooks": [
       "hooks/kairos-feishu-ingress"
     ]
-  }
+  },
+  "files": [
+    "dist",
+    "hooks",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ]
 }

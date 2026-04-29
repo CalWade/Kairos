@@ -288,3 +288,8 @@ KAIROS_FEISHU_WEBHOOK_URL=...
 ```
 
 这一路线是“OpenClaw 负责飞书接收，Kairos 负责记忆判断和卡片生成/发送”，避免自建公网回调和 OAuth。
+
+
+## 分发注意
+
+`npm pack` 会自动运行 `npm run build`，并将 `dist/` 与 `hooks/` 一起打进发布包。通过 `openclaw plugins install ./memoryops-0.1.0.tgz` 安装时，用户不需要手动 build。开发机用 `openclaw plugins install -l .` 链接源码时，源码改动后需要重新运行 `npm run build`。
