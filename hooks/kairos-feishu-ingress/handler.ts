@@ -1,4 +1,4 @@
-import { appendFileSync, mkdirSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -12,6 +12,7 @@ const handler = async (event: any) => {
   if (!text) return;
 
   const workspaceDir = context.workspaceDir ?? process.cwd();
+  const repoDir = resolveRepoDir(workspaceDir);
   const args = [
     "run", "-s", "dev", "--",
     "feishu-workflow",
@@ -21,13 +22,13 @@ const handler = async (event: any) => {
   if (process.env.KAIROS_HOOK_SEND_FEISHU === "1") args.push("--send-feishu-webhook");
 
   const result = spawnSync("npm", args, {
-    cwd: workspaceDir,
+    cwd: repoDir,
     encoding: "utf8",
     timeout: Number(process.env.KAIROS_HOOK_TIMEOUT_MS ?? 30000),
     env: process.env,
   });
 
-  log(workspaceDir, {
+  log(repoDir, {
     at: new Date().toISOString(),
     sessionKey: event.sessionKey,
     channel,
@@ -43,8 +44,18 @@ function log(workspaceDir: string, item: unknown) {
   appendFileSync(path, `${JSON.stringify(item)}\n`);
 }
 
-function safeJson(text: string) {
-  const trimmed = text.trim();
+function resolveRepoDir(workspaceDir: string): string {
+  if (process.env.KAIROS_REPO_DIR) return process.env.KAIROS_REPO_DIR;
+  const normalized = workspaceDir.replace(/\/$/, "");
+  const candidates = [normalized, `${normalized}/memoryops`, process.cwd()];
+  for (const candidate of candidates) {
+    if (existsSync(resolve(candidate, "package.json"))) return candidate;
+  }
+  return normalized;
+}
+
+function safeJson(text: unknown) {
+  const trimmed = typeof text === "string" ? text.trim() : "";
   if (!trimmed) return undefined;
   try { return JSON.parse(trimmed); } catch { return trimmed.slice(0, 1000); }
 }
