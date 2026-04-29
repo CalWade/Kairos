@@ -36,8 +36,8 @@
     "zod": "latest"
   },
   "openclaw": {
-    "hooks": {
-      "kairos-feishu-ingress": "hooks/kairos-feishu-ingress"
-    }
+    "hooks": [
+      "hooks/kairos-feishu-ingress"
+    ]
   }
 }

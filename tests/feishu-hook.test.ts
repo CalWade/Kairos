@@ -7,7 +7,7 @@ describe("kairos-feishu-ingress hook", () => {
     const handler = readFileSync("hooks/kairos-feishu-ingress/handler.ts", "utf8");
 
     expect(meta).toContain("message:received");
-    expect(handler).toContain("feishu-workflow");
+    expect(handler).toContain("runFeishuWorkflow");
     expect(handler).toContain("KAIROS_HOOK_SEND_FEISHU");
     expect(handler).toContain("runs/kairos-feishu-ingress.jsonl");
   });

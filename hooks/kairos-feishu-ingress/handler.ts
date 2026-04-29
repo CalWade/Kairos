@@ -1,6 +1,6 @@
 import { appendFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { spawnSync } from "node:child_process";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const handler = async (event: any) => {
   if (event?.type !== "message" || event?.action !== "received") return;
@@ -8,71 +8,84 @@ const handler = async (event: any) => {
   const workspaceDir = context.workspaceDir ?? process.cwd();
   const repoDir = resolveRepoDir(workspaceDir);
   const channel = String(context.channelId ?? context.metadata?.channel ?? context.metadata?.provider ?? "");
+  const text = String(context.content ?? context.bodyForAgent ?? context.text ?? "").trim();
+
   log(repoDir, {
     at: new Date().toISOString(),
     phase: "received",
     type: event.type,
     action: event.action,
     channel,
+    repoDir,
     context_keys: Object.keys(context),
     metadata_keys: context.metadata ? Object.keys(context.metadata) : [],
-    content_preview: String(context.content ?? context.bodyForAgent ?? context.text ?? "").slice(0, 80),
+    content_preview: text.slice(0, 80),
   });
+
   if (channel && !channel.includes("feishu") && context.metadata?.provider !== "feishu" && context.metadata?.channel !== "feishu") return;
-
-  const text = String(context.content ?? context.bodyForAgent ?? context.text ?? "").trim();
   if (!text) return;
-  const args = [
-    "run", "-s", "dev", "--",
-    "feishu-workflow",
-    "--project", process.env.KAIROS_PROJECT ?? "kairos",
-    "--text", text,
-  ];
-  if (process.env.KAIROS_HOOK_SEND_FEISHU === "1") args.push("--send-feishu-webhook");
 
-  const result = spawnSync("npm", args, {
-    cwd: repoDir,
-    encoding: "utf8",
-    timeout: Number(process.env.KAIROS_HOOK_TIMEOUT_MS ?? 30000),
-    env: process.env,
-  });
-
-  log(repoDir, {
-    at: new Date().toISOString(),
-    sessionKey: event.sessionKey,
-    channel,
-    status: result.status,
-    error: result.error ? String(result.error).slice(0, 500) : undefined,
-    stdout: safeJson(result.stdout),
-    stderr: result.stderr?.slice(0, 500),
-  });
+  try {
+    const [{ MemoryStore }, { runFeishuWorkflow }, { sendFeishuInteractiveWebhook, redactWebhookUrl }, { loadEnvValue }] = await Promise.all([
+      importFromRepo(repoDir, "dist/memory/store.js"),
+      importFromRepo(repoDir, "dist/workflow/feishuWorkflow.js"),
+      importFromRepo(repoDir, "dist/feishuWebhook.js"),
+      importFromRepo(repoDir, "dist/llm/config.js"),
+    ]);
+    const store = new MemoryStore(resolve(repoDir, "data/memory.db"), resolve(repoDir, "data/memory_events.jsonl"));
+    const output = runFeishuWorkflow(store, { text, project: process.env.KAIROS_PROJECT ?? "kairos" });
+    let sent: unknown;
+    let webhook: string | undefined;
+    if (process.env.KAIROS_HOOK_SEND_FEISHU === "1" && output.action === "push_decision_card" && output.card) {
+      const webhookUrl = process.env.KAIROS_FEISHU_WEBHOOK_URL ?? loadEnvValue("KAIROS_FEISHU_WEBHOOK_URL", resolve(repoDir, ".env"));
+      if (!webhookUrl) throw new Error("KAIROS_HOOK_SEND_FEISHU=1 but KAIROS_FEISHU_WEBHOOK_URL is missing");
+      sent = await sendFeishuInteractiveWebhook(webhookUrl, output.card);
+      webhook = redactWebhookUrl(webhookUrl);
+    }
+    log(repoDir, {
+      at: new Date().toISOString(),
+      sessionKey: event.sessionKey,
+      channel,
+      output,
+      sent,
+      webhook,
+    });
+  } catch (error) {
+    log(repoDir, {
+      at: new Date().toISOString(),
+      sessionKey: event.sessionKey,
+      channel,
+      error: String(error).slice(0, 1000),
+    });
+  }
 };
 
-function log(workspaceDir: string, item: unknown) {
-  const path = resolve(workspaceDir, "runs/kairos-feishu-ingress.jsonl");
+function importFromRepo(repoDir: string, relativePath: string) {
+  return import(pathToFileURL(resolve(repoDir, relativePath)).href);
+}
+
+function log(repoDir: string, item: unknown) {
+  const path = resolve(repoDir, "runs/kairos-feishu-ingress.jsonl");
   mkdirSync(dirname(path), { recursive: true });
   appendFileSync(path, `${JSON.stringify(item)}\n`);
 }
 
 function resolveRepoDir(workspaceDir: string): string {
   if (process.env.KAIROS_REPO_DIR) return process.env.KAIROS_REPO_DIR;
+  const hookDir = dirname(fileURLToPath(import.meta.url));
+  const packageRootFromHook = resolve(hookDir, "../..");
   const normalized = workspaceDir.replace(/\/$/, "");
   const candidates = [
+    packageRootFromHook,
     "/home/ecs-user/.openclaw/workspace/memoryops",
     `${normalized}/memoryops`,
     normalized,
     process.cwd(),
   ];
   for (const candidate of candidates) {
-    if (existsSync(resolve(candidate, "package.json"))) return candidate;
+    if (existsSync(resolve(candidate, "package.json")) && existsSync(resolve(candidate, "dist/cli.js"))) return candidate;
   }
-  return normalized;
-}
-
-function safeJson(text: unknown) {
-  const trimmed = typeof text === "string" ? text.trim() : "";
-  if (!trimmed) return undefined;
-  try { return JSON.parse(trimmed); } catch { return trimmed.slice(0, 1000); }
+  return packageRootFromHook;
 }
 
 export default handler;

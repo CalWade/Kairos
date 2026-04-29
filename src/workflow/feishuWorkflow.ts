@@ -31,10 +31,11 @@ export function runFeishuWorkflow(store: MemoryStore, input: FeishuWorkflowInput
 
   const top = hits[0];
   const score = heuristicMatchScore(query, top);
-  if (score < (input.minScore ?? 1)) return ignore(query, "命中强度不足，避免打扰");
+  if (score < (input.minScore ?? 2)) return ignore(query, "命中强度不足，避免打扰");
 
   const answer = formatRecallAnswer(query, hits);
   if (top.type === "decision") {
+    if (!hasStrongDecisionCue(query, top)) return ignore(query, "未触及该决策的关键选项或反向检索 key，避免误推卡片");
     const card = renderDecisionCardFeishuPayload(buildDecisionCard(top));
     return {
       ok: true,
@@ -71,6 +72,32 @@ function isLikelyNoise(text: string): boolean {
 
 function summarizeHits(hits: MemoryAtom[]) {
   return hits.map((item) => ({ id: item.id, type: item.type, subject: item.subject, status: item.status }));
+}
+
+function hasStrongDecisionCue(query: string, atom: MemoryAtom): boolean {
+  const needles = decisionNeedles(atom);
+  const normalized = query.toLowerCase();
+  return needles.some((needle) => normalized.includes(needle.toLowerCase()));
+}
+
+function decisionNeedles(atom: MemoryAtom): string[] {
+  const raw = atom.metadata?.raw_extraction as {
+    aliases?: unknown;
+    negative_keys?: unknown;
+    options_considered?: unknown;
+    rejected_options?: unknown;
+  } | undefined;
+  const values: string[] = [];
+  values.push(...atom.tags);
+  if (Array.isArray(raw?.aliases)) values.push(...raw.aliases.filter((item): item is string => typeof item === "string"));
+  if (Array.isArray(raw?.negative_keys)) values.push(...raw.negative_keys.filter((item): item is string => typeof item === "string"));
+  if (Array.isArray(raw?.options_considered)) values.push(...raw.options_considered.filter((item): item is string => typeof item === "string"));
+  if (Array.isArray(raw?.rejected_options)) {
+    for (const item of raw.rejected_options) {
+      if (item && typeof item === "object" && "option" in item && typeof item.option === "string") values.push(item.option);
+    }
+  }
+  return [...new Set(values.map((item) => item.trim()).filter((item) => item.length >= 3 || /^[A-Za-z0-9+#.-]{2,}$/.test(item)))];
 }
 
 function heuristicMatchScore(query: string, atom: MemoryAtom): number {

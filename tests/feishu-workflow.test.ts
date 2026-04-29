@@ -32,6 +32,20 @@ describe("runFeishuWorkflow", () => {
     expect(JSON.stringify(result.card)).toContain("历史决策卡片");
   }));
 
+  it("与历史决策无关的问题不误推决策卡片", () => withStore((store) => {
+    store.upsert(createManualMemory({
+      text: "决策：MVP 阶段使用 SQLite\n理由：PostgreSQL 部署成本高",
+      project: "kairos",
+      type: "decision",
+      subject: "local_storage_selection",
+      tags: ["SQLite", "PostgreSQL", "数据库选型"],
+    }));
+
+    const result = runFeishuWorkflow(store, { project: "kairos", text: "hooks 的正确安装和配置方案是不是可以确定了？" });
+
+    expect(result.action).toBe("ignore");
+  }));
+
   it("低价值闲聊不触发", () => withStore((store) => {
     const result = runFeishuWorkflow(store, { project: "kairos", text: "收到" });
     expect(result.action).toBe("ignore");
