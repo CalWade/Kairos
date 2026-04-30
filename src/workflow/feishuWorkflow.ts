@@ -1,7 +1,7 @@
 import type { MemoryAtom } from "../memory/atom.js";
 import { buildDecisionCard, renderDecisionCardFeishuPayload } from "../memory/decisionCard.js";
 import { formatRecallAnswer } from "../memory/recallFormatter.js";
-import { MemoryStore } from "../memory/store.js";
+import type { MemoryStoreLike } from "../memory/storeFactory.js";
 
 export type FeishuWorkflowInput = {
   text: string;
@@ -21,7 +21,7 @@ export type FeishuWorkflowOutput = {
   matched?: Array<{ id: string; type: string; subject: string; status: string }>;
 };
 
-export function runFeishuWorkflow(store: MemoryStore, input: FeishuWorkflowInput): FeishuWorkflowOutput {
+export function runFeishuWorkflow(store: MemoryStoreLike, input: FeishuWorkflowInput): FeishuWorkflowOutput {
   const query = input.text.trim();
   if (!query) return ignore(query, "空消息");
   if (isSlashCommand(query)) return ignore(query, "OpenClaw/聊天命令不进入记忆工作流");
@@ -67,7 +67,7 @@ function ignore(query: string, reason: string): FeishuWorkflowOutput {
   return { ok: true, action: "ignore", reason, query };
 }
 
-function safeSearch(store: MemoryStore, query: string, options: { project?: string; limit: number }): MemoryAtom[] {
+function safeSearch(store: MemoryStoreLike, query: string, options: { project?: string; limit: number }): MemoryAtom[] {
   try {
     return store.search(query, options);
   } catch {

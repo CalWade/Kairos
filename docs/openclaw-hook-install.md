@@ -55,7 +55,7 @@ openclaw hooks enable kairos-feishu-ingress
 openclaw gateway restart
 ```
 
-`package.json` 中配置了 `prepack: npm run build` 和 `files: ["dist", "hooks", ...]`，因此发布/打包产物会包含已编译的 `dist/`。用户通过 `.tgz` 安装时不需要再手动运行 `npm run build`。
+`package.json` 中配置了 `prepack: npm run build` 和 `files: ["dist", "hooks", ...]`，因此发布/打包产物会包含已编译的 `dist/`。hook 默认使用 JSONL portable store，用户通过 `.tgz` 安装时不需要手动运行 `npm run build`，也不依赖 native SQLite 编译。
 
 开发机使用 `openclaw plugins install -l .` 时，仍建议在改动源码后先运行：
 
@@ -78,12 +78,6 @@ runs/kairos-feishu-ingress.jsonl
 ```bash
 export KAIROS_HOOK_SEND_FEISHU=1
 export KAIROS_FEISHU_WEBHOOK_URL="https://open.feishu.cn/open-apis/bot/v2/hook/..."
-```
-
-可选：显式指定 Kairos 仓库路径，避免 Gateway 进程 cwd 不确定：
-
-```bash
-export KAIROS_REPO_DIR="/home/ecs-user/.openclaw/workspace/memoryops"
 ```
 
 ## 验证

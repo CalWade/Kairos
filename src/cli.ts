@@ -3,7 +3,7 @@ import { Command } from "commander";
 import { readFileSync } from "node:fs";
 import { MemoryAtomSchema } from "./memory/schema.js";
 import { createManualMemory } from "./memory/factory.js";
-import { MemoryStore } from "./memory/store.js";
+import { createMemoryStore } from "./memory/storeFactory.js";
 import { loadSmokeCases, summarizeSmokeCases } from "./eval/smoke.js";
 import { runAllCoreEvals, runAntiInterferenceEval, runConflictUpdateEval, runDecisionExtractionEval, runFeishuWorkflowEval, runLlmDecisionExtractionEval, runRecallEval, runRemindEval } from "./eval/runner.js";
 import { createAtomFromFact, extractFacts, reconcileFact } from "./extractor/mockExtractor.js";
@@ -27,8 +27,8 @@ program
   .description("Kairos: Enterprise long-term collaborative memory engine for Feishu and OpenClaw")
   .version("0.1.0");
 
-function storeFromOptions(opts: { db?: string; events?: string }) {
-  return new MemoryStore(opts.db ?? "data/memory.db", opts.events ?? "data/memory_events.jsonl");
+async function storeFromOptions(opts: { db?: string; events?: string; store?: string }) {
+  return createMemoryStore(opts);
 }
 
 
@@ -45,8 +45,9 @@ program
   .option("--write", "将抽取结果写入 Memory Store")
   .option("--llm", "使用 LLMDecisionExtractor；未指定时使用规则 baseline")
   .option("--fallback", "LLM 调用失败时回退到规则 baseline")
-  .option("--db <path>", "SQLite 数据库路径")
+  .option("--db <path>", "SQLite/JSONL 数据路径")
   .option("--events <path>", "JSONL event log 路径")
+  .option("--store <kind>", "存储后端 jsonl/sqlite，默认 jsonl")
   .action(async (opts) => {
     if (!opts.text && !opts.file) throw new Error("请提供 --text 或 --file");
     const text = opts.text ?? readFileSync(opts.file, "utf8");
@@ -66,7 +67,7 @@ program
       ? await extractDecisionWithLlm(window, { fallback: !!opts.fallback })
       : extractDecisionBaseline(window);
     const atom = extractionToMemoryAtom(result, window, opts.project);
-    const saved = opts.write && atom ? storeFromOptions(opts).upsert(atom) : undefined;
+    const saved = opts.write && atom ? (await storeFromOptions(opts)).upsert(atom) : undefined;
     console.log(JSON.stringify({ ok: true, command: "extract-decision", result, atom, saved }, null, 2));
   });
 
@@ -129,7 +130,7 @@ program
   .option("--doc-token <token>", "飞书文档 token")
   .option("--chat-id <chatId>", "原始会话 ID")
   .option("--limit <limit>", "输出前 N 条", "20")
-  .action((opts) => {
+  .action(async (opts) => {
     const markdown = readFileSync(opts.file, "utf8");
     const messages = normalizeFeishuChatExport(markdown, {
       docToken: opts.docToken,
@@ -149,9 +150,10 @@ program
   .option("--text <text>", "要摄取的原始文本")
   .option("--file <path>", "从文件读取文本，每个非空行作为一条输入")
   .option("--project <project>", "项目名")
-  .option("--db <path>", "SQLite 数据库路径")
+  .option("--db <path>", "SQLite/JSONL 数据路径")
   .option("--events <path>", "JSONL event log 路径")
-  .action((opts) => {
+  .option("--store <kind>", "存储后端 jsonl/sqlite，默认 jsonl")
+  .action(async (opts) => {
     if (!opts.text && !opts.file) {
       throw new Error("请提供 --text 或 --file");
     }
@@ -162,7 +164,7 @@ program
       inputs.push(...fileText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean));
     }
 
-    const store = storeFromOptions(opts);
+    const store = await storeFromOptions(opts);
     const results = inputs.flatMap((input) => {
       const facts = extractFacts(input, { project: opts.project });
       return facts.map((fact) => {
@@ -192,9 +194,10 @@ program
   .option("--scope <scope>", "作用域 personal/team/org", "team")
   .option("--subject <subject>", "记忆主题")
   .option("--tag <tag...>", "标签")
-  .option("--db <path>", "SQLite 数据库路径")
+  .option("--db <path>", "SQLite/JSONL 数据路径")
   .option("--events <path>", "JSONL event log 路径")
-  .action((opts) => {
+  .option("--store <kind>", "存储后端 jsonl/sqlite，默认 jsonl")
+  .action(async (opts) => {
     const atom = createManualMemory({
       text: opts.text,
       project: opts.project,
@@ -203,7 +206,7 @@ program
       subject: opts.subject,
       tags: opts.tag ?? [],
     });
-    const saved = storeFromOptions(opts).upsert(atom);
+    const saved = (await storeFromOptions(opts)).upsert(atom);
     console.log(JSON.stringify({ ok: true, command: "add", atom: saved }, null, 2));
   });
 
@@ -216,10 +219,11 @@ program
   .option("--scope <scope>", "作用域")
   .option("--include-history", "包含 superseded/expired 等历史记忆")
   .option("--limit <limit>", "返回数量", "10")
-  .option("--db <path>", "SQLite 数据库路径")
+  .option("--db <path>", "SQLite/JSONL 数据路径")
   .option("--events <path>", "JSONL event log 路径")
-  .action((query, opts) => {
-    const results = storeFromOptions(opts).search(query, {
+  .option("--store <kind>", "存储后端 jsonl/sqlite，默认 jsonl")
+  .action(async (query, opts) => {
+    const results = (await storeFromOptions(opts)).search(query, {
       project: opts.project,
       type: opts.type,
       scope: opts.scope,
@@ -234,11 +238,12 @@ program
   .argument("<query>")
   .option("--evidence", "包含证据")
   .option("--project <project>", "项目名")
-  .option("--db <path>", "SQLite 数据库路径")
+  .option("--db <path>", "SQLite/JSONL 数据路径")
   .option("--events <path>", "JSONL event log 路径")
+  .option("--store <kind>", "存储后端 jsonl/sqlite，默认 jsonl")
   .description("从记忆中召回答案（当前为检索式 MVP）")
-  .action((query, opts) => {
-    const results = storeFromOptions(opts).search(query, {
+  .action(async (query, opts) => {
+    const results = (await storeFromOptions(opts)).search(query, {
       project: opts.project,
       limit: 5,
     });
@@ -267,10 +272,11 @@ program
   .option("--feishu-json", "输出飞书 interactive card payload JSON（仅生成，不发送）")
   .option("--send-feishu-webhook", "通过飞书机器人 webhook 发送卡片（外部动作，必须显式指定）")
   .option("--feishu-webhook <url>", "飞书机器人 webhook；也可用 KAIROS_FEISHU_WEBHOOK_URL")
-  .option("--db <path>", "SQLite 数据库路径")
+  .option("--db <path>", "SQLite/JSONL 数据路径")
   .option("--events <path>", "JSONL event log 路径")
+  .option("--store <kind>", "存储后端 jsonl/sqlite，默认 jsonl")
   .action(async (atomId, opts) => {
-    const atom = storeFromOptions(opts).get(atomId);
+    const atom = (await storeFromOptions(opts)).get(atomId);
     if (!atom) {
       console.log(JSON.stringify({ ok: false, command: "decision-card", error: `记忆不存在：${atomId}` }, null, 2));
       process.exitCode = 1;
@@ -306,12 +312,13 @@ program
   .option("--project <project>", "项目名")
   .option("--send-feishu-webhook", "当建议推送卡片时，通过飞书机器人 webhook 发送")
   .option("--feishu-webhook <url>", "飞书机器人 webhook；也可用 KAIROS_FEISHU_WEBHOOK_URL")
-  .option("--db <path>", "SQLite 数据库路径")
+  .option("--db <path>", "SQLite/JSONL 数据路径")
   .option("--events <path>", "JSONL event log 路径")
+  .option("--store <kind>", "存储后端 jsonl/sqlite，默认 jsonl")
   .action(async (opts) => {
     if (!opts.text && !opts.file) throw new Error("请提供 --text 或 --file");
     const text = opts.text ?? readFileSync(opts.file, "utf8");
-    const result = runFeishuWorkflow(storeFromOptions(opts), { text, project: opts.project });
+    const result = runFeishuWorkflow(await storeFromOptions(opts), { text, project: opts.project });
     if (opts.sendFeishuWebhook && result.action === "push_decision_card" && result.card) {
       const webhookUrl = opts.feishuWebhook ?? loadEnvValue("KAIROS_FEISHU_WEBHOOK_URL");
       if (!webhookUrl) throw new Error("缺少飞书 webhook：请传 --feishu-webhook 或设置 KAIROS_FEISHU_WEBHOOK_URL");
@@ -331,10 +338,11 @@ program
   .option("--scope <scope>", "作用域")
   .option("--include-history", "包含历史记忆")
   .option("--limit <limit>", "返回数量", "20")
-  .option("--db <path>", "SQLite 数据库路径")
+  .option("--db <path>", "SQLite/JSONL 数据路径")
   .option("--events <path>", "JSONL event log 路径")
-  .action((opts) => {
-    const results = storeFromOptions(opts).list({
+  .option("--store <kind>", "存储后端 jsonl/sqlite，默认 jsonl")
+  .action(async (opts) => {
+    const results = (await storeFromOptions(opts)).list({
       project: opts.project,
       type: opts.type,
       scope: opts.scope,
@@ -348,10 +356,11 @@ program
   .command("history")
   .argument("<atomId>")
   .description("查看单条记忆详情")
-  .option("--db <path>", "SQLite 数据库路径")
+  .option("--db <path>", "SQLite/JSONL 数据路径")
   .option("--events <path>", "JSONL event log 路径")
+  .option("--store <kind>", "存储后端 jsonl/sqlite，默认 jsonl")
   .action(async (atomId, opts) => {
-    const atom = storeFromOptions(opts).get(atomId);
+    const atom = (await storeFromOptions(opts)).get(atomId);
     console.log(JSON.stringify({ ok: !!atom, command: "history", atom }, null, 2));
   });
 
@@ -365,12 +374,13 @@ remind
   .option("--project <project>", "项目名")
   .option("--type <type>", "记忆类型，默认不过滤")
   .option("--limit <limit>", "返回数量", "20")
-  .option("--db <path>", "SQLite 数据库路径")
+  .option("--db <path>", "SQLite/JSONL 数据路径")
   .option("--events <path>", "JSONL event log 路径")
+  .option("--store <kind>", "存储后端 jsonl/sqlite，默认 jsonl")
   .description("列出 review_at 已到期的记忆提醒")
-  .action((opts) => {
+  .action(async (opts) => {
     const now = opts.now ?? new Date().toISOString();
-    const reminders = storeFromOptions(opts).dueReminders({
+    const reminders = (await storeFromOptions(opts)).dueReminders({
       now,
       project: opts.project,
       type: opts.type,
@@ -398,11 +408,12 @@ remind
   .command("ack")
   .argument("<atomId>")
   .option("--now <time>", "mock current time, ISO 8601")
-  .option("--db <path>", "SQLite 数据库路径")
+  .option("--db <path>", "SQLite/JSONL 数据路径")
   .option("--events <path>", "JSONL event log 路径")
+  .option("--store <kind>", "存储后端 jsonl/sqlite，默认 jsonl")
   .description("标记一条提醒已处理，并清除 review_at")
   .action(async (atomId, opts) => {
-    const atom = storeFromOptions(opts).ackReminder(atomId, { now: opts.now });
+    const atom = (await storeFromOptions(opts)).ackReminder(atomId, { now: opts.now });
     console.log(JSON.stringify({ ok: true, command: "remind ack", atom }, null, 2));
   });
 
@@ -411,11 +422,12 @@ remind
   .argument("<atomId>")
   .requiredOption("--until <time>", "新的 review_at，ISO 8601")
   .option("--now <time>", "mock current time, ISO 8601")
-  .option("--db <path>", "SQLite 数据库路径")
+  .option("--db <path>", "SQLite/JSONL 数据路径")
   .option("--events <path>", "JSONL event log 路径")
+  .option("--store <kind>", "存储后端 jsonl/sqlite，默认 jsonl")
   .description("稍后提醒：把 review_at 改到指定时间")
   .action(async (atomId, opts) => {
-    const atom = storeFromOptions(opts).snoozeReminder(atomId, opts.until, { now: opts.now });
+    const atom = (await storeFromOptions(opts)).snoozeReminder(atomId, opts.until, { now: opts.now });
     console.log(JSON.stringify({ ok: true, command: "remind snooze", atom }, null, 2));
   });
 

@@ -293,3 +293,14 @@ KAIROS_FEISHU_WEBHOOK_URL=...
 ## 分发注意
 
 `npm pack` 会自动运行 `npm run build`，并将 `dist/` 与 `hooks/` 一起打进发布包。通过 `openclaw plugins install ./memoryops-0.1.0.tgz` 安装时，用户不需要手动 build。开发机用 `openclaw plugins install -l .` 链接源码时，源码改动后需要重新运行 `npm run build`。
+
+
+## 存储后端
+
+默认存储后端为 JSONL portable store，适合 OpenClaw hook pack 免编译分发。开发环境如需使用 SQLite，可设置：
+
+```bash
+KAIROS_STORE=sqlite
+```
+
+SQLite 模式依赖 `better-sqlite3` native binding，不作为插件包默认运行模式。

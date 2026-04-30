@@ -7,6 +7,7 @@
 - CLI：`memoryops`
 - MemoryAtom v0.2 类型与 Zod Schema
 - SQLite Memory Store
+- JSONL portable store：OpenClaw hook 默认使用，避免 native SQLite 编译依赖
 - JSONL Event Log
 - `add / search / recall / list / history`
 - `supersede` 非损失效覆盖

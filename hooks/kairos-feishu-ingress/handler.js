@@ -27,13 +27,17 @@ const handler = async (event) => {
 
   try {
     ensureBuilt(repoDir);
-    const [{ MemoryStore }, { runFeishuWorkflow }, { sendFeishuInteractiveWebhook, redactWebhookUrl }, { loadEnvValue }] = await Promise.all([
-      importFromRepo(repoDir, "dist/memory/store.js"),
+    const [{ createMemoryStore }, { runFeishuWorkflow }, { sendFeishuInteractiveWebhook, redactWebhookUrl }, { loadEnvValue }] = await Promise.all([
+      importFromRepo(repoDir, "dist/memory/storeFactory.js"),
       importFromRepo(repoDir, "dist/workflow/feishuWorkflow.js"),
       importFromRepo(repoDir, "dist/feishuWebhook.js"),
       importFromRepo(repoDir, "dist/llm/config.js"),
     ]);
-    const store = new MemoryStore(resolve(repoDir, "data/memory.db"), resolve(repoDir, "data/memory_events.jsonl"));
+    const store = createMemoryStore({
+      store: process.env.KAIROS_STORE ?? "jsonl",
+      db: resolve(repoDir, "data/memory.jsonl"),
+      events: resolve(repoDir, "data/memory_events.jsonl"),
+    });
     const output = runFeishuWorkflow(store, { text, project: process.env.KAIROS_PROJECT ?? "kairos" });
     let sent;
     let webhook;
@@ -73,7 +77,8 @@ function log(repoDir, item) {
 
 function ensureBuilt(repoDir) {
   const required = [
-    "dist/memory/store.js",
+    "dist/memory/storeFactory.js",
+    "dist/memory/jsonlStore.js",
     "dist/workflow/feishuWorkflow.js",
     "dist/feishuWebhook.js",
     "dist/llm/config.js",

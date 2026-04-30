@@ -66,12 +66,12 @@ tail -f runs/kairos-feishu-ingress.jsonl
 
 ## 当前重要限制
 
-当前版本仍依赖 `better-sqlite3`。OpenClaw 安装插件依赖时会使用 `--ignore-scripts`，因此打包安装目录中的 native binding 可能不可用。
+当前 hook 默认使用 JSONL portable store，不依赖 `better-sqlite3` native binding，因此通过 OpenClaw `--ignore-scripts` 安装后也可运行。
 
-比赛演示机建议设置：
+如需在本地开发中使用 SQLite 后端，可显式设置：
 
 ```bash
-export KAIROS_REPO_DIR="/home/ecs-user/.openclaw/workspace/memoryops"
+KAIROS_STORE=sqlite
 ```
 
-让 hook 使用已安装依赖的开发仓库运行。真正免编译分发需要后续改为 JSONL portable store 或服务化。
+SQLite 模式依赖 `better-sqlite3` native binding，适合开发仓库环境，不作为 hook pack 默认运行模式。
