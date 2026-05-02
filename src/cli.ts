@@ -19,6 +19,7 @@ import { formatRecallAnswer } from "./memory/recallFormatter.js";
 import { redactWebhookUrl, sendFeishuInteractiveWebhook } from "./feishuWebhook.js";
 import { loadEnvValue } from "./llm/config.js";
 import { runFeishuWorkflow } from "./workflow/feishuWorkflow.js";
+import { checkLarkCliStatus } from "./larkCliAdapter.js";
 
 const program = new Command();
 
@@ -35,6 +36,19 @@ async function storeFromOptions(opts: { db?: string; events?: string; store?: st
 
 
 
+
+
+const larkCli = program
+  .command("lark-cli")
+  .description("官方 lark-cli 适配层（当前仅做本地状态检查，不触发授权或数据读取）");
+
+larkCli
+  .command("status")
+  .option("--check-auth", "同时检查 lark-cli auth status（不发起登录）")
+  .description("检查官方 lark-cli 是否安装及认证状态")
+  .action((opts) => {
+    console.log(JSON.stringify({ ok: true, command: "lark-cli status", status: checkLarkCliStatus({ checkAuth: !!opts.checkAuth }) }, null, 2));
+  });
 
 program
   .command("extract-decision")
