@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLarkCliPlan, checkLarkCliStatus, extractTextsFromLarkCliJson } from "../src/larkCliAdapter.js";
+import { buildLarkCliPlan, checkLarkCliStatus, extractTextsFromLarkCliJson, preflightLarkCliPurpose } from "../src/larkCliAdapter.js";
 
 describe("lark-cli adapter", () => {
   it("status check never throws", () => {
@@ -11,6 +11,11 @@ describe("lark-cli adapter", () => {
   it("buildLarkCliPlan 生成消息搜索和文档读取命令但不执行", () => {
     expect(buildLarkCliPlan({ purpose: "message_search", query: "PostgreSQL" }).command).toContain("+messages-search");
     expect(buildLarkCliPlan({ purpose: "doc_fetch", docUrl: "https://example.feishu.cn/wiki/xxx" }).command).toContain("+fetch");
+  });
+
+  it("preflightLarkCliPurpose can report missing scopes", () => {
+    const preflight = preflightLarkCliPurpose("message_search");
+    expect(preflight.required_scopes).toContain("search:message");
   });
 
   it("extractTextsFromLarkCliJson 从常见 lark-cli 输出中提取文本", () => {

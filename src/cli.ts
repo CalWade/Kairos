@@ -19,7 +19,7 @@ import { formatRecallAnswer } from "./memory/recallFormatter.js";
 import { redactWebhookUrl, sendFeishuInteractiveWebhook } from "./feishuWebhook.js";
 import { loadEnvValue } from "./llm/config.js";
 import { runFeishuWorkflow } from "./workflow/feishuWorkflow.js";
-import { buildLarkCliPlan, checkLarkCliStatus, extractTextsFromLarkCliJson } from "./larkCliAdapter.js";
+import { buildLarkCliPlan, checkLarkCliStatus, extractTextsFromLarkCliJson, preflightLarkCliPurpose } from "./larkCliAdapter.js";
 
 const program = new Command();
 
@@ -52,6 +52,15 @@ larkCli
 
 
 
+
+
+larkCli
+  .command("preflight")
+  .requiredOption("--purpose <purpose>", "chat_messages/message_search/doc_fetch/event_consume")
+  .description("检查某类 lark-cli 数据获取所需授权是否满足")
+  .action((opts) => {
+    console.log(JSON.stringify({ ok: true, command: "lark-cli preflight", preflight: preflightLarkCliPurpose(opts.purpose) }, null, 2));
+  });
 
 larkCli
   .command("ingest-file")

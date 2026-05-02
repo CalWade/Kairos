@@ -80,3 +80,16 @@ memoryops lark-cli ingest-file --file /tmp/lark-output.json --project kairos --w
 ```
 
 该命令只读取本地 JSON 文件，不调用飞书 API。授权完成后，可以把 `lark-cli im +messages-search --format json` 或 `lark-cli docs +fetch --format json` 的输出保存为文件，再交给 Kairos 入库。
+
+
+## 授权预检
+
+真实读取前先检查 scope：
+
+```bash
+memoryops lark-cli preflight --purpose message_search
+memoryops lark-cli preflight --purpose chat_messages
+memoryops lark-cli preflight --purpose doc_fetch
+```
+
+如果缺少 scope，命令会输出推荐的 `lark-cli auth login --scope ...`。若租户/应用不允许授予对应权限，Kairos 仍可使用离线导入：先通过飞书导出文件或 OpenClaw 飞书工具获取数据，再交给 `memoryops lark-cli ingest-file`。
