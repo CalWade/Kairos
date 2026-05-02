@@ -19,7 +19,7 @@ import { formatRecallAnswer } from "./memory/recallFormatter.js";
 import { redactWebhookUrl, sendFeishuInteractiveWebhook } from "./feishuWebhook.js";
 import { loadEnvValue } from "./llm/config.js";
 import { runFeishuWorkflow } from "./workflow/feishuWorkflow.js";
-import { buildLarkCliPlan, checkLarkCliStatus } from "./larkCliAdapter.js";
+import { buildLarkCliPlan, checkLarkCliStatus, extractTextsFromLarkCliJson } from "./larkCliAdapter.js";
 
 const program = new Command();
 
@@ -48,6 +48,44 @@ larkCli
   .description("检查官方 lark-cli 是否安装及认证状态")
   .action((opts) => {
     console.log(JSON.stringify({ ok: true, command: "lark-cli status", status: checkLarkCliStatus({ checkAuth: !!opts.checkAuth }) }, null, 2));
+  });
+
+
+
+
+larkCli
+  .command("ingest-file")
+  .requiredOption("--file <path>", "lark-cli --format json 输出文件")
+  .option("--project <project>", "项目名")
+  .option("--write", "将抽取结果写入 Memory Store")
+  .option("--db <path>", "SQLite/JSONL 数据路径")
+  .option("--events <path>", "JSONL event log 路径")
+  .option("--store <kind>", "存储后端 jsonl/sqlite，默认 jsonl")
+  .description("离线读取 lark-cli JSON 输出，抽取文本并进入 Kairos 决策抽取管道")
+  .action(async (opts) => {
+    const raw = JSON.parse(readFileSync(opts.file, "utf8"));
+    const texts = extractTextsFromLarkCliJson(raw);
+    const store = opts.write ? await storeFromOptions(opts) : undefined;
+    const results = [];
+    for (const item of texts) {
+      const window = {
+        id: item.id,
+        segment_id: item.id,
+        topic_hint: "lark-cli",
+        salience_score: 0.8,
+        salience_signals: [],
+        candidate_eligible: true,
+        denoised_text: item.text,
+        evidence_message_ids: [item.id],
+        dropped_message_ids: [],
+        estimated_tokens: Math.ceil(item.text.length / 2),
+      };
+      const extraction = extractDecisionBaseline(window);
+      const atom = extractionToMemoryAtom(extraction, window, opts.project);
+      const saved = opts.write && atom ? store!.upsert(atom) : undefined;
+      results.push({ source: item, extraction, atom, saved });
+    }
+    console.log(JSON.stringify({ ok: true, command: "lark-cli ingest-file", total: results.length, results }, null, 2));
   });
 
 

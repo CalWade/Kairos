@@ -69,3 +69,14 @@ lark-cli im/docs/wiki --format json
 - `lark-cli` 是飞书数据与 API 适配层，不是 Memory Engine；
 - Kairos 仍负责筛选、抽取、存储、召回、更新和评测；
 - 授权需要用户确认权限范围，不能由 Agent 静默完成。
+
+
+## 离线导入命令
+
+授权前也可以先用文件模拟 lark-cli JSON 输出：
+
+```bash
+memoryops lark-cli ingest-file --file /tmp/lark-output.json --project kairos --write
+```
+
+该命令只读取本地 JSON 文件，不调用飞书 API。授权完成后，可以把 `lark-cli im +messages-search --format json` 或 `lark-cli docs +fetch --format json` 的输出保存为文件，再交给 Kairos 入库。
