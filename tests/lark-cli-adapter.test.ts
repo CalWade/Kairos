@@ -17,6 +17,7 @@ describe("lark-cli adapter", () => {
     const command = buildLarkCliPlan({ purpose: "chat_messages", chatId: "oc_x", profile: "kairos-alt" }).command;
     expect(command).toContain("--profile");
     expect(command).toContain("kairos-alt");
+    expect(command.filter((item) => item === "--profile")).toHaveLength(1);
   });
 
   it("preflightLarkCliPurpose can report missing scopes", () => {

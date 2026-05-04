@@ -19,7 +19,7 @@ import { formatRecallAnswer } from "./memory/recallFormatter.js";
 import { redactWebhookUrl, sendFeishuInteractiveWebhook } from "./feishuWebhook.js";
 import { loadEnvValue } from "./llm/config.js";
 import { runFeishuWorkflow } from "./workflow/feishuWorkflow.js";
-import { buildLarkCliPlan, checkLarkCliStatus, extractTextsFromLarkCliJson, preflightLarkCliPurpose } from "./larkCliAdapter.js";
+import { buildLarkCliPlan, checkLarkCliStatus, extractTextsFromLarkCliJson, preflightLarkCliPurpose, runLarkCliJson } from "./larkCliAdapter.js";
 
 const program = new Command();
 
@@ -62,6 +62,50 @@ larkCli
   .description("检查某类 lark-cli 数据获取所需授权是否满足")
   .action((opts) => {
     console.log(JSON.stringify({ ok: true, command: "lark-cli preflight", preflight: preflightLarkCliPurpose(opts.purpose, { profile: opts.profile }) }, null, 2));
+  });
+
+
+larkCli
+  .command("ingest-chat")
+  .requiredOption("--chat-id <chatId>", "飞书群聊 chat_id（oc_xxx）")
+  .option("--profile <profile>", "lark-cli profile 名称")
+  .option("--project <project>", "项目名")
+  .option("--page-size <size>", "读取消息数量 1-50", "20")
+  .option("--start <time>", "起始时间 ISO 8601")
+  .option("--end <time>", "结束时间 ISO 8601")
+  .option("--write", "将抽取结果写入 Memory Store")
+  .option("--db <path>", "SQLite/JSONL 数据路径")
+  .option("--events <path>", "JSONL event log 路径")
+  .option("--store <kind>", "存储后端 jsonl/sqlite，默认 jsonl")
+  .description("调用官方 lark-cli 读取群消息，并进入 Kairos 抽取/入库管道")
+  .action(async (opts) => {
+    const args = ["im", "+chat-messages-list", "--chat-id", opts.chatId, "--format", "json", "--page-size", String(opts.pageSize)];
+    if (opts.start) args.push("--start", opts.start);
+    if (opts.end) args.push("--end", opts.end);
+    if (opts.profile) args.push("--profile", opts.profile);
+    const raw = runLarkCliJson(args);
+    const texts = extractTextsFromLarkCliJson(raw);
+    const store = opts.write ? await storeFromOptions(opts) : undefined;
+    const results = [];
+    for (const item of texts) {
+      const window = {
+        id: item.id,
+        segment_id: item.id,
+        topic_hint: "lark-cli-chat",
+        salience_score: 0.8,
+        salience_signals: [],
+        candidate_eligible: true,
+        denoised_text: item.text,
+        evidence_message_ids: [item.id],
+        dropped_message_ids: [],
+        estimated_tokens: Math.ceil(item.text.length / 2),
+      };
+      const extraction = extractDecisionBaseline(window);
+      const atom = extractionToMemoryAtom(extraction, window, opts.project);
+      const saved = opts.write && atom ? store!.upsert(atom) : undefined;
+      results.push({ source: item, extraction, atom, saved });
+    }
+    console.log(JSON.stringify({ ok: true, command: "lark-cli ingest-chat", chat_id: opts.chatId, total: results.length, saved_total: results.filter((r) => r.saved).length, results }, null, 2));
   });
 
 larkCli

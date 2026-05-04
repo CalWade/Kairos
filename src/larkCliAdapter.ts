@@ -225,3 +225,12 @@ function dedupeByText(items: LarkCliExtractedText[]): LarkCliExtractedText[] {
     return true;
   });
 }
+
+
+export function runLarkCliJson(args: string[]): unknown {
+  const result = spawnSync("lark-cli", args, { encoding: "utf8", timeout: 60_000, maxBuffer: 10 * 1024 * 1024 });
+  if (result.status !== 0) {
+    throw new Error((result.stderr || result.stdout || `lark-cli failed with status ${result.status}`).trim());
+  }
+  return JSON.parse(result.stdout);
+}
