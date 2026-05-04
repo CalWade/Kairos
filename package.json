@@ -39,6 +39,13 @@
   "openclaw": {
     "hooks": [
       "hooks/kairos-feishu-ingress"
+    ],
+    "setup": "openclaw.setup.json",
+    "docs": [
+      "OPENCLAW.md",
+      "INSTALL.md",
+      "docs/lark-cli-runbook.md",
+      "docs/openclaw-hook-install.md"
     ]
   },
   "files": [
@@ -48,6 +55,9 @@
     "LICENSE",
     "package.json",
     "INSTALL.md",
-    "docs/openclaw-hook-install.md"
+    "docs/openclaw-hook-install.md",
+    "OPENCLAW.md",
+    "openclaw.setup.json",
+    "docs/lark-cli-runbook.md"
   ]
 }

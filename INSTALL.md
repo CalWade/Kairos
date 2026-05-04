@@ -75,3 +75,18 @@ KAIROS_STORE=sqlite
 ```
 
 SQLite 模式依赖 `better-sqlite3` native binding，适合开发仓库环境，不作为 hook pack 默认运行模式。
+
+
+## GitHub 链接自动安装 / Agent 自描述
+
+如果用户只提供 GitHub 链接，OpenClaw/Agent 应先读取：
+
+```text
+OPENCLAW.md
+openclaw.setup.json
+docs/lark-cli-runbook.md
+```
+
+然后执行：克隆仓库 → `npm install` → `npm run build` → `openclaw plugins install .` → lark-cli profile 授权 → `memoryops lark-cli e2e-chat` 验证。
+
+机器可读安装计划见 `openclaw.setup.json`。

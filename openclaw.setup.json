@@ -1,0 +1,69 @@
+{
+  "schema": "kairos.openclaw.setup.v1",
+  "name": "Kairos",
+  "packageName": "memoryops",
+  "repository": "https://github.com/CalWade/Kairos",
+  "summary": "Feishu/OpenClaw long-term collaboration memory engine with lark-cli as official data ingress.",
+  "requirements": {
+    "node": ">=22",
+    "openclaw": "installed",
+    "globalTools": [
+      {
+        "name": "lark-cli",
+        "check": "lark-cli --version",
+        "install": "npm install -g @larksuite/cli"
+      }
+    ]
+  },
+  "install": {
+    "fromGitHubLink": [
+      "git clone https://github.com/CalWade/Kairos.git kairos",
+      "cd kairos",
+      "npm install",
+      "npm run build",
+      "openclaw plugins install .",
+      "openclaw gateway restart"
+    ],
+    "fromPackedArchive": [
+      "openclaw plugins install ./memoryops-0.1.0.tgz",
+      "openclaw gateway restart"
+    ]
+  },
+  "interactiveSteps": [
+    {
+      "id": "lark_cli_profile",
+      "title": "Create lark-cli profile",
+      "command": "lark-cli config init --new --name kairos-alt",
+      "userAction": "Open the printed Feishu URL with the target account and confirm app setup."
+    },
+    {
+      "id": "lark_cli_auth",
+      "title": "Authorize lark-cli user identity",
+      "command": "lark-cli auth login --recommend --profile kairos-alt",
+      "userAction": "Open the printed Feishu OAuth device URL and confirm authorization."
+    }
+  ],
+  "postInstallChecks": [
+    "memoryops lark-cli status --check-auth --profile kairos-alt",
+    "memoryops lark-cli preflight --purpose chat_messages --profile kairos-alt",
+    "npm run dev -- eval --core"
+  ],
+  "primaryDemo": {
+    "needs": [
+      "chat_id"
+    ],
+    "command": "memoryops lark-cli e2e-chat --chat-id <oc_xxx> --profile kairos-alt --project kairos --trigger-text \"要不我们还是用 PostgreSQL？\"",
+    "success": "workflow.action == push_decision_card"
+  },
+  "safeDefaults": {
+    "store": "jsonl",
+    "autoSendFeishuCard": false,
+    "requiresExplicitWebhookEnv": true
+  },
+  "docs": [
+    "OPENCLAW.md",
+    "INSTALL.md",
+    "docs/lark-cli-runbook.md",
+    "docs/openclaw-hook-install.md"
+  ]
+}
