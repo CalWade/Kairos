@@ -320,3 +320,18 @@ read chat messages: true
 e2e chat -> memory -> workflow: true
 workflow_action: push_decision_card
 ```
+
+
+## Setup Wizard / Pretty Doctor
+
+```bash
+memoryops setup-wizard --profile kairos-alt
+memoryops doctor --profile kairos-alt --pretty
+memoryops doctor --profile kairos-alt --chat-id <oc_xxx> --e2e --pretty
+```
+
+录屏或评审 demo 可用：
+
+```bash
+KAIROS_DEMO_CHAT_ID=<oc_xxx> npm run demo:lark-cli-chat
+```

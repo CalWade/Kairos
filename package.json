@@ -13,7 +13,8 @@
     "eval:smoke": "tsx src/cli.ts eval --smoke",
     "demo:e2e": "bash scripts/demo-e2e.sh",
     "demo:feishu-workflow": "bash scripts/demo-feishu-workflow.sh",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "demo:lark-cli-chat": "bash scripts/demo-lark-cli-chat.sh"
   },
   "keywords": [
     "memory",

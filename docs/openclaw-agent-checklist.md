@@ -18,3 +18,12 @@ Use this checklist when a user sends the Kairos GitHub link and asks you to inst
 10. If successful, report `read_total`, `saved_total`, and `workflow_action`.
 
 Never ask for passwords, SMS codes, App Secret, or OAuth tokens.
+
+
+Shortcut commands:
+
+```bash
+memoryops setup-wizard --profile kairos-alt
+memoryops doctor --profile kairos-alt --pretty
+memoryops doctor --profile kairos-alt --chat-id <oc_xxx> --e2e --pretty
+```

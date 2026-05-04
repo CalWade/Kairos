@@ -130,3 +130,18 @@ memoryops lark-cli preflight --purpose chat_messages --profile kairos-alt
 - lark-cli scope 不足：用飞书导出文件或 OpenClaw 飞书工具获取数据，再 `memoryops lark-cli ingest-file`。
 - 不能全局搜索：不用 `+messages-search`，按 `chat_id` 读取。
 - webhook 不可用：只生成 Decision Card JSON，不自动发送。
+
+
+## Setup Wizard / Pretty Doctor
+
+```bash
+memoryops setup-wizard --profile kairos-alt
+memoryops doctor --profile kairos-alt --pretty
+memoryops doctor --profile kairos-alt --chat-id <oc_xxx> --e2e --pretty
+```
+
+录屏或评审 demo 可用：
+
+```bash
+KAIROS_DEMO_CHAT_ID=<oc_xxx> npm run demo:lark-cli-chat
+```

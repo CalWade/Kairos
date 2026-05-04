@@ -46,6 +46,7 @@ program
   .option("--project <project>", "项目名", "kairos")
   .option("--trigger-text <text>", "可选：端到端触发文本", "要不我们还是用 PostgreSQL？")
   .option("--e2e", "提供 --chat-id 时同时跑真实 e2e-chat")
+  .option("--pretty", "输出人类友好的诊断摘要")
   .option("--db <path>", "SQLite/JSONL 数据路径")
   .option("--events <path>", "JSONL event log 路径")
   .option("--store <kind>", "存储后端 jsonl/sqlite，默认 jsonl")
@@ -96,9 +97,51 @@ program
       }
     }
     const requiredOk = checks.filter((c) => !c.name.includes("optional")).every((c) => c.ok);
-    console.log(JSON.stringify({ ok: requiredOk, command: "doctor", profile: opts.profile, chat_id: opts.chatId, checks }, null, 2));
+    const report = { ok: requiredOk, command: "doctor", profile: opts.profile, chat_id: opts.chatId, checks };
+    if (opts.pretty) console.log(renderDoctorPretty(report));
+    else console.log(JSON.stringify(report, null, 2));
     if (!requiredOk) process.exitCode = 1;
   });
+
+program
+  .command("setup-wizard")
+  .option("--profile <profile>", "lark-cli profile 名称", "kairos-alt")
+  .option("--chat-id <chatId>", "可选：目标群 chat_id，用于生成最终验收命令")
+  .description("输出 Kairos + lark-cli 安装配置向导的下一步动作；阻塞授权步骤由 Agent/用户按提示执行")
+  .action((opts) => {
+    const larkStatus = checkLarkCliStatus({ checkAuth: true, profile: opts.profile });
+    const chatPreflight = preflightLarkCliPurpose("chat_messages", { profile: opts.profile });
+    const steps = [] as Array<{ id: string; status: "done" | "todo"; command?: string; userAction?: string; note?: string }>;
+    steps.push({ id: "build", status: existsSync("dist/cli.js") ? "done" : "todo", command: "npm install && npm run build" });
+    steps.push({ id: "install-openclaw-plugin", status: existsSync("hooks/kairos-feishu-ingress/handler.js") && existsSync("openclaw.setup.json") ? "done" : "todo", command: "openclaw plugins install . && openclaw gateway restart", note: "仓库已包含插件元数据；如目标 OpenClaw 未安装过仍需执行该命令" });
+    steps.push({ id: "install-lark-cli", status: larkStatus.installed ? "done" : "todo", command: "npm install -g @larksuite/cli" });
+    steps.push({ id: "create-profile", status: larkStatus.auth_ok ? "done" : "todo", command: `lark-cli config init --new --name ${opts.profile}`, userAction: "打开命令打印的 open.feishu.cn 链接，用目标飞书账号完成应用配置" });
+    steps.push({ id: "authorize-profile", status: larkStatus.auth_ok ? "done" : "todo", command: `lark-cli auth login --recommend --profile ${opts.profile}`, userAction: "打开命令打印的 OAuth 链接，确认授权" });
+    steps.push({ id: "preflight", status: chatPreflight.missing_scopes.length === 0 ? "done" : "todo", command: `memoryops doctor --profile ${opts.profile} --pretty`, note: chatPreflight.missing_scopes.length ? `缺少：${chatPreflight.missing_scopes.join(", ")}` : "chat_messages ready" });
+    steps.push({ id: "get-chat-id", status: opts.chatId ? "done" : "todo", command: `lark-cli im +chat-search --query <群名关键词> --format json --profile ${opts.profile}`, userAction: "或让用户直接提供 oc_xxx chat_id" });
+    steps.push({ id: "final-e2e", status: "todo", command: opts.chatId ? `memoryops doctor --profile ${opts.profile} --chat-id ${opts.chatId} --e2e --pretty` : `memoryops doctor --profile ${opts.profile} --chat-id <oc_xxx> --e2e --pretty` });
+    const done = steps.filter((s) => s.status === "done").length;
+    const next = steps.find((s) => s.status === "todo");
+    console.log(JSON.stringify({ ok: !next, command: "setup-wizard", profile: opts.profile, progress: `${done}/${steps.length}`, next, steps }, null, 2));
+  });
+
+function renderDoctorPretty(report: { ok: boolean; profile: string; chat_id?: string; checks: Array<{ name: string; ok: boolean; detail?: unknown; next?: string }> }): string {
+  const lines = [
+    `Kairos doctor (${report.profile})`,
+    `Status: ${report.ok ? "READY" : "NEEDS_ACTION"}`,
+    report.chat_id ? `Chat: ${report.chat_id}` : undefined,
+    "",
+  ].filter(Boolean) as string[];
+  for (const check of report.checks) {
+    const optional = check.name.includes("optional");
+    const icon = check.ok ? "✅" : optional ? "⚠️" : "❌";
+    lines.push(`${icon} ${check.name}`);
+    if (!check.ok && check.next) lines.push(`   next: ${check.next}`);
+    if (check.detail && (check.name.includes("e2e") || check.name.includes("read chat"))) lines.push(`   detail: ${JSON.stringify(check.detail)}`);
+  }
+  lines.push("", report.ok ? "Ready for lark-cli demo." : "Fix required checks above, then rerun doctor.");
+  return lines.join("\n");
+}
 
 const larkCli = program
   .command("lark-cli")
