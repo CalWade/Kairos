@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CandidateWindow } from "../src/candidate/window.js";
-import { normalizeExtractionResult, parseJsonObject } from "../src/extractor/llmDecisionExtractor.js";
+import { extractDecisionWithLlm, normalizeExtractionResult, parseJsonObject } from "../src/extractor/llmDecisionExtractor.js";
 
 function win(text = "demo"): CandidateWindow {
   return {
@@ -49,5 +49,41 @@ describe("LLMDecisionExtractor helpers", () => {
   it("未知 kind 会归一化为 none", () => {
     const result = normalizeExtractionResult({ kind: "other", confidence: 0.5 }, win());
     expect(result.kind).toBe("none");
+  });
+
+  it("should_remember=false 会拒识为 none 并保留 reject_reason", () => {
+    const result = normalizeExtractionResult({ kind: "decision", should_remember: false, reject_reason: "未形成稳定结论", confidence: 0.4 }, win());
+    expect(result.kind).toBe("none");
+    expect(result.reject_reason).toBe("未形成稳定结论");
+  });
+
+  it("LLM 非 JSON 首次失败后会重试成功", async () => {
+    let calls = 0;
+    const fetchImpl = (async () => {
+      calls += 1;
+      const content = calls === 1 ? "not json" : JSON.stringify({ kind: "none", should_remember: false, reject_reason: "闲聊", confidence: 0.3, evidence_message_ids: ["m1"], aliases: [], negative_keys: [], reasoning: "not memory" });
+      return new Response(JSON.stringify({ choices: [{ message: { content } }] }), { status: 200 });
+    }) as typeof fetch;
+    const result = await extractDecisionWithLlm(win("收到"), {
+      config: { provider: "openai_compatible", baseUrl: "http://fake", apiKey: "k", model: "m" },
+      fetchImpl,
+      maxAttempts: 2,
+    });
+    expect(calls).toBe(2);
+    expect(result.kind).toBe("none");
+    expect(result.extractor_metadata?.attempts).toBe(2);
+  });
+
+  it("LLM 连续失败且 fallback=true 会回退规则并记录 degraded", async () => {
+    const fetchImpl = (async () => new Response("bad-json", { status: 200 })) as typeof fetch;
+    const result = await extractDecisionWithLlm(win("最终决定 MVP 阶段使用 SQLite，不用 PostgreSQL。"), {
+      config: { provider: "openai_compatible", baseUrl: "http://fake", apiKey: "k", model: "m" },
+      fetchImpl,
+      maxAttempts: 2,
+      fallback: true,
+    });
+    expect(result.kind).toBe("decision");
+    expect(result.extractor_metadata?.degraded).toBe(true);
+    expect(Array.isArray(result.extractor_metadata?.llm_failures)).toBe(true);
   });
 });

@@ -7,6 +7,9 @@ export type BaseExtraction = {
   aliases: string[];
   negative_keys: string[];
   reasoning: string;
+  should_remember?: boolean;
+  reject_reason?: string;
+  extractor_metadata?: Record<string, unknown>;
 };
 
 export type DecisionCandidate = BaseExtraction & {
