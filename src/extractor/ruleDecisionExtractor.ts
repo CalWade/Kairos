@@ -15,10 +15,11 @@ export function extractDecisionBaseline(window: CandidateWindow): ExtractionResu
     return none(evidence, "候选窗口不可用或内容为空");
   }
 
+  if (isDefinitelyUnresolved(text)) {
+    return none(evidence, "检测到明确的未定问题、复议问题或待确认表达，不沉淀为长期记忆");
+  }
+
   if (/SQLite|PostgreSQL|MongoDB|JSONL|状态库|数据库/.test(text)) {
-    if (isUnresolvedQuestion(text)) {
-      return none(evidence, "仅出现未定问题或待讨论表达，不能沉淀为决策记忆");
-    }
     return {
       kind: "decision",
       confidence: 0.82,
@@ -89,12 +90,12 @@ export function extractDecisionBaseline(window: CandidateWindow): ExtractionResu
   return none(evidence, "未识别出可长期复用的决策、规则、风险或工作流");
 }
 
-function isUnresolvedQuestion(text: string): boolean {
-  const asksDecision = /[？?]|会不会|要不要|要不|能不能|是否|可不可以|能否/.test(text);
-  if (!asksDecision) return false;
-  const hasFinalCue = /最终|决定|已定|结论|选择|采用|使用|不使用|不允许|必须|改为|先按|同意/.test(text);
-  if (!hasFinalCue) return true;
-  return /还没定|未定|再讨论|待确认|之后再说|晚上再讨论/.test(text);
+function isDefinitelyUnresolved(text: string): boolean {
+  const hasQuestionCue = /[？?]|会不会|要不要|要不|能不能|是否|是不是|可不可以|能否|为什么|怎么|如何/.test(text);
+  const hasPendingCue = /还没定|未定|再讨论|待确认|之后再说|晚上再讨论|先别写|不确定|没复现|待评估/.test(text);
+  const hasResolutionCue = /最终|决定|已定|结论|改为|先按|当前先|先选择|同意|统一|团队约定|明确|定一下|固定下来/.test(text);
+  if (hasPendingCue && !hasResolutionCue) return true;
+  return hasQuestionCue && !hasResolutionCue;
 }
 
 function none(evidence: string[], reasoning: string): ExtractionResult {

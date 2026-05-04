@@ -10,3 +10,8 @@
 {"id":"none_noise_001","input":"黄威健：ok。韦贺文：哈哈。","expected_kind":"none","expected_topic":"","expected_contains":[]}
 {"id":"none_status_chatter_001","input":"张三：我下午可能晚点到。李雷：收到。","expected_kind":"none","expected_topic":"","expected_contains":[]}
 {"id":"none_question_only_001","input":"王五：PostgreSQL 会不会太重？李雷：这个还没定，晚上再讨论。","expected_kind":"none","expected_topic":"","expected_contains":[]}
+{"id":"none_unresolved_storage_002","input":"张三：SQLite 还是 PostgreSQL？李四：不一定，明天再讨论吧。","expected_kind":"none","expected_topic":"","expected_contains":[]}
+{"id":"none_risk_question_001","input":"黄威健：要不要给独立 IP？","expected_kind":"none","expected_topic":"","expected_contains":[]}
+{"id":"none_api_key_question_001","input":"这个 API Key 会不会有风险？先别写进方案。","expected_kind":"none","expected_topic":"","expected_contains":[]}
+{"id":"none_vague_risk_001","input":"貌似有个问题但我还没复现，之后再说。","expected_kind":"none","expected_topic":"","expected_contains":[]}
+{"id":"none_ack_only_002","input":"韦贺文：辛苦了。黄威健：嗯嗯。","expected_kind":"none","expected_topic":"","expected_contains":[]}
