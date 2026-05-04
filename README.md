@@ -29,6 +29,29 @@ AI Agent 在企业协作中经常“失忆”：
 
 > Kairos 将飞书群聊、文档、任务、日程和 CLI 操作中的协作信息，转化为结构化的 MemoryAtom，并通过冲突更新、遗忘提醒和 Benchmark 证明长期记忆的实际价值。
 
+
+## lark-cli 官方入口（推荐主流程）
+
+Kairos 现在优先使用官方 `lark-cli` 作为飞书数据获取层：
+
+```text
+lark-cli 读取真实飞书群消息 / 文档
+→ Kairos 抽取 MemoryAtom
+→ 后续消息触发历史决策召回 / Decision Card
+```
+
+最短验证链路：
+
+```bash
+npm install -g @larksuite/cli
+lark-cli config init --new --name kairos-alt
+lark-cli auth login --recommend --profile kairos-alt
+memoryops lark-cli preflight --purpose chat_messages --profile kairos-alt
+memoryops lark-cli e2e-chat --chat-id <oc_xxx> --profile kairos-alt --project kairos
+```
+
+详见 `docs/lark-cli-runbook.md`。
+
 ## Quick Start（当前 WIP）
 
 当前阶段已经可以运行 CLI 骨架、MemoryAtom Schema 校验和 smoke benchmark 数据集加载。

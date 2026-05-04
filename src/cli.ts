@@ -65,6 +65,57 @@ larkCli
   });
 
 
+
+larkCli
+  .command("e2e-chat")
+  .requiredOption("--chat-id <chatId>", "飞书群聊 chat_id（oc_xxx）")
+  .option("--profile <profile>", "lark-cli profile 名称")
+  .option("--project <project>", "项目名", "kairos")
+  .option("--trigger-text <text>", "用于模拟新消息触发召回", "要不我们还是用 PostgreSQL？")
+  .option("--page-size <size>", "读取消息数量 1-50", "20")
+  .option("--db <path>", "SQLite/JSONL 数据路径")
+  .option("--events <path>", "JSONL event log 路径")
+  .option("--store <kind>", "存储后端 jsonl/sqlite，默认 jsonl")
+  .description("端到端：读取真实飞书群消息 → Kairos 入库 → 用触发文本生成工作流决策")
+  .action(async (opts) => {
+    const args = ["im", "+chat-messages-list", "--chat-id", opts.chatId, "--format", "json", "--page-size", String(opts.pageSize)];
+    if (opts.profile) args.push("--profile", opts.profile);
+    const raw = runLarkCliJson(args);
+    const texts = extractTextsFromLarkCliJson(raw);
+    const store = await storeFromOptions(opts);
+    const ingested = [];
+    for (const item of texts) {
+      const window = {
+        id: item.id,
+        segment_id: item.id,
+        topic_hint: "lark-cli-e2e-chat",
+        salience_score: 0.8,
+        salience_signals: [],
+        candidate_eligible: true,
+        denoised_text: item.text,
+        evidence_message_ids: [item.id],
+        dropped_message_ids: [],
+        estimated_tokens: Math.ceil(item.text.length / 2),
+      };
+      const extraction = extractDecisionBaseline(window);
+      const atom = extractionToMemoryAtom(extraction, window, opts.project);
+      const saved = atom ? store.upsert(atom) : undefined;
+      ingested.push({ source: item, extraction, saved });
+    }
+    const workflow = runFeishuWorkflow(store, { text: opts.triggerText, project: opts.project });
+    console.log(JSON.stringify({
+      ok: true,
+      command: "lark-cli e2e-chat",
+      chat_id: opts.chatId,
+      profile: opts.profile,
+      read_total: texts.length,
+      saved_total: ingested.filter((item) => item.saved).length,
+      trigger_text: opts.triggerText,
+      workflow,
+      ingested,
+    }, null, 2));
+  });
+
 larkCli
   .command("ingest-chat")
   .requiredOption("--chat-id <chatId>", "飞书群聊 chat_id（oc_xxx）")

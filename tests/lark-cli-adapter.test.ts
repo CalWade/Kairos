@@ -25,6 +25,15 @@ describe("lark-cli adapter", () => {
     expect(preflight.required_scopes).toContain("search:message");
   });
 
+  it("过滤 app 卡片和授权链接噪声", () => {
+    const texts = extractTextsFromLarkCliJson({ data: { messages: [
+      { message_id: "app_1", msg_type: "post", sender: { sender_type: "app" }, content: "<card>配置链接</card>" },
+      { message_id: "user_1", msg_type: "text", sender: { sender_type: "user" }, content: "最终决定：先用 SQLite。" },
+    ] } });
+    expect(texts).toHaveLength(1);
+    expect(texts[0].id).toBe("user_1");
+  });
+
   it("extractTextsFromLarkCliJson 从常见 lark-cli 输出中提取文本", () => {
     const texts = extractTextsFromLarkCliJson({
       data: {

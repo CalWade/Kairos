@@ -178,6 +178,7 @@ function collectRecords(value: unknown): Record<string, unknown>[] {
 }
 
 function pickText(record: Record<string, unknown>): string | undefined {
+  if (isLarkCliNoiseRecord(record)) return undefined;
   for (const key of ["text", "content", "body", "markdown", "plain_text", "message"]) {
     const value = record[key];
     if (typeof value === "string" && value.trim()) return stripJsonText(value.trim());
@@ -191,6 +192,15 @@ function pickText(record: Record<string, unknown>): string | undefined {
     }
   }
   return undefined;
+}
+
+function isLarkCliNoiseRecord(record: Record<string, unknown>): boolean {
+  const sender = record.sender;
+  if (sender && typeof sender === "object" && (sender as Record<string, unknown>).sender_type === "app") return true;
+  if (record.msg_type === "interactive" || record.msg_type === "post") return true;
+  const raw = String(record.content ?? record.text ?? "").trim();
+  if (raw.startsWith("<card>") || raw.includes("open.feishu.cn/page/cli") || raw.includes("accounts.feishu.cn/oauth")) return true;
+  return false;
 }
 
 function stripJsonText(value: string): string {
