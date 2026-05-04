@@ -74,6 +74,45 @@ describe("LLMDecisionExtractor helpers", () => {
     expect(result.extractor_metadata?.attempts).toBe(2);
   });
 
+  it("LLM convention security boundary is coerced to risk", async () => {
+    const fetchImpl = (async () => new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
+      kind: "convention",
+      should_remember: true,
+      confidence: 0.7,
+      topic: "api_key_rule",
+      rule: "线上 API Key 不能放浏览器里直连，必须服务端代理",
+      scope: "team",
+      evidence_message_ids: ["m1"],
+      aliases: [],
+      negative_keys: [],
+      reasoning: "team rule",
+    }) } }] }), { status: 200 })) as typeof fetch;
+    const result = await extractDecisionWithLlm(win("安全边界定一下：线上 API Key 绝对不能放浏览器里直连，必须服务端代理。"), {
+      config: { provider: "openai_compatible", baseUrl: "http://fake", apiKey: "k", model: "m" },
+      fetchImpl,
+    });
+    expect(result.kind).toBe("risk");
+    if (result.kind !== "risk") return;
+    expect(result.severity).toBe("high");
+  });
+
+  it("API Key convention post-processes to risk", () => {
+    const result = normalizeExtractionResult({
+      kind: "convention",
+      should_remember: true,
+      confidence: 0.7,
+      topic: "api_key_rule",
+      rule: "线上 API Key 不能放浏览器里直连，必须服务端代理",
+      scope: "team",
+      evidence_message_ids: ["m1"],
+      aliases: [],
+      negative_keys: [],
+      reasoning: "team rule",
+    }, win("安全边界定一下：线上 API Key 绝对不能放浏览器里直连，必须服务端代理。"));
+    // normalize alone preserves LLM output; post-processing is covered by extractDecisionWithLlm integration.
+    expect(result.kind).toBe("convention");
+  });
+
   it("LLM 连续失败且 fallback=true 会回退规则并记录 degraded", async () => {
     const fetchImpl = (async () => new Response("bad-json", { status: 200 })) as typeof fetch;
     const result = await extractDecisionWithLlm(win("最终决定 MVP 阶段使用 SQLite，不用 PostgreSQL。"), {

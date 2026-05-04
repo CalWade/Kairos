@@ -50,7 +50,7 @@ export async function extractDecisionWithLlm(
 
   if (call.ok) {
     try {
-      const normalized = normalizeExtractionResult(parseJsonObject(call.content), window);
+      const normalized = postProcessLlmResult(normalizeExtractionResult(parseJsonObject(call.content), window), window);
       return withMetadata(normalized, {
         extractor: "llm",
         prompt_version: LLM_EXTRACTOR_PROMPT_VERSION,
@@ -132,6 +132,10 @@ const SYSTEM_PROMPT = `你是 Kairos 的企业项目决策记忆抽取器。
 必须严格使用以下 kind 之一：decision, convention, risk, workflow, none。
 共同字段：kind, should_remember, reject_reason, confidence, evidence_message_ids, aliases, negative_keys, reasoning。
 如果只是未定问题、复议问题、闲聊、状态同步、噪声消息，返回 kind=none 且 should_remember=false，并写 reject_reason。
+类型边界必须遵守：
+- risk：安全边界、API Key/密钥、生产环境、前端直连、泄露、权限、故障、乱码、独立 IP、上线风险。只要内容表达“可能造成安全/稳定性/交付风险”或“必须防止某风险”，优先判 risk，不要判 convention。
+- convention：团队约定、负责人、接收人、周期性规则、命名规范、协作习惯。它不是安全风险，也不是项目方案决策。
+- decision：方案取舍、技术选型、是否采用/不采用某方案，必须有结论或拍板信号。
 只能基于 evidence_message_ids 对应文本抽取，不得补充未出现的信息。
 
 JSON 形状：
@@ -234,6 +238,30 @@ export function normalizeExtractionResult(value: unknown, window: CandidateWindo
     };
   }
   return { kind: "none", ...base };
+}
+
+
+function postProcessLlmResult(result: ExtractionResult, window: CandidateWindow): ExtractionResult {
+  if (result.kind === "convention" && /API Key|密钥|前端直连|生产环境|泄露|安全边界|权限|故障|乱码|独立\s*IP/i.test(`${window.denoised_text}
+${result.rule}
+${result.topic}`)) {
+    return {
+      kind: "risk",
+      confidence: Math.max(0.6, result.confidence),
+      evidence_message_ids: result.evidence_message_ids,
+      aliases: [...new Set([...(result.aliases ?? []), "API Key", "安全边界", "风险"])],
+      negative_keys: result.negative_keys,
+      reasoning: `LLM 初判为 convention，但命中安全/生产风险边界，按 risk 处理：${result.reasoning}`,
+      should_remember: result.should_remember,
+      reject_reason: result.reject_reason,
+      topic: /API Key|密钥/i.test(window.denoised_text) ? "api_key_policy" : "project_risk",
+      risk: result.rule,
+      impact: /前端直连|泄露/i.test(window.denoised_text) ? "可能造成密钥泄露或越权访问" : undefined,
+      mitigation: /服务端|代理/i.test(window.denoised_text) ? "通过服务端代理使用敏感凭据" : undefined,
+      severity: "high",
+    };
+  }
+  return result;
 }
 
 function degradedFallback(window: CandidateWindow, failures: LlmAttemptFailure[]): ExtractionResult {

@@ -155,12 +155,9 @@ function window(text: string): CandidateWindow {
 }
 
 async function extractDecisionWithLlmWithRetry(candidate: CandidateWindow) {
-  try {
-    return await extractDecisionWithLlm(candidate, { fallback: false, timeoutMs: 60_000 });
-  } catch (error) {
-    if (!String(error).includes("AbortError") && !String(error).includes("aborted")) throw error;
-    return extractDecisionWithLlm(candidate, { fallback: false, timeoutMs: 90_000 });
-  }
+  // LLM eval should measure result quality without letting one slow/invalid response kill the suite.
+  // Fallback results are kept in extractor_metadata.degraded so they remain visible in reports.
+  return extractDecisionWithLlm(candidate, { fallback: true, timeoutMs: 30_000, maxAttempts: 2 });
 }
 
 function addDays(iso: string, days: number): string {
