@@ -57,6 +57,7 @@ export function writeEngineDashboardHtml(data: EngineDashboardData, outputPath: 
 
 export function renderEngineDashboardHtml(data: EngineDashboardData, options: { refreshSeconds?: number } = {}): string {
   const latestRuntime = data.runtime_logs.slice(-8).reverse();
+  const capturedMessages = extractCapturedMessages(data.runtime_logs).slice(-12).reverse();
   const latestRuntimeLabel = typeof (latestRuntime[0] as any)?.chat_label === "string"
     ? (latestRuntime[0] as any).chat_label
     : typeof (latestRuntime[0] as any)?.chat_name === "string"
@@ -111,6 +112,12 @@ export function renderEngineDashboardHtml(data: EngineDashboardData, options: { 
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:12px; color:#dbe7ff; }
     .muted { color: var(--muted); }
     pre { white-space:pre-wrap; word-break:break-word; margin:0; font-size:12px; color:#dbe7ff; }
+    details { border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:10px 12px; background:rgba(255,255,255,.025); }
+    summary { cursor:pointer; color:#c7d6ff; font-size:13px; }
+    .msg-list { display:flex; flex-direction:column; gap:10px; }
+    .msg-card { border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:12px; background:rgba(23,34,58,.7); }
+    .msg-meta { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:6px; color:var(--muted); font-size:12px; }
+    .msg-text { font-size:14px; line-height:1.55; }
     @media (max-width: 980px) { .span3,.span4,.span5,.span6,.span7,.span8,.span12 { grid-column: span 12; } header { flex-direction:column; align-items:flex-start; } }
   </style>
 </head>
@@ -152,10 +159,21 @@ export function renderEngineDashboardHtml(data: EngineDashboardData, options: { 
       ${queueTable("修正队列", refine.slice(-8).reverse())}
     </section>
 
-    <section class="card span6">
-      <h2>最近飞书入口 / 激活日志</h2>
+    <section class="card span8">
+      <h2>捕获到的真实群聊信息</h2>
       <div class="muted" style="margin-bottom:10px">最新来源：${escapeHtml(latestRuntimeLabel)}</div>
-      ${logTable(latestRuntime)}
+      ${capturedMessageList(capturedMessages)}
+    </section>
+
+    <section class="card span4">
+      <h2>运行诊断</h2>
+      ${runtimeSummary(latestRuntime)}
+      <div style="height:12px"></div>
+      <details>
+        <summary>展开原始 runtime 日志（排障用）</summary>
+        <div style="height:10px"></div>
+        ${logTable(latestRuntime)}
+      </details>
     </section>
 
     <section class="card span6">
@@ -205,6 +223,39 @@ function queueTable(title: string, jobs: any[]): string {
   return `<h2 style="font-size:14px;margin-top:0">${escapeHtml(title)}</h2>${jobs.length ? `<table><tbody>${jobs.map((j) => `<tr><td><span class="pill">${escapeHtml(j.status ?? "unknown")}</span></td><td class="mono">${escapeHtml(short(j.id ?? "", 18))}</td><td>${escapeHtml(short(j.window?.topic_hint ?? j.note ?? j.error ?? "", 70))}</td></tr>`).join("")}</tbody></table>` : `<div class="muted">无队列任务</div>`}`;
 }
 
+function extractCapturedMessages(runtimeLogs: unknown[]): any[] {
+  const messages: any[] = [];
+  for (const log of runtimeLogs as any[]) {
+    const rows = Array.isArray(log?.recent_messages) ? log.recent_messages : Array.isArray(log?.result?.recent_messages) ? log.result.recent_messages : [];
+    for (const row of rows) messages.push({ ...row, chat_label: log.chat_label ?? log.result?.chat_label });
+  }
+  const seen = new Set<string>();
+  return messages.filter((message) => {
+    const key = String(message.id ?? `${message.timestamp}:${message.sender}:${message.text}`);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function capturedMessageList(messages: any[]): string {
+  if (!messages.length) return `<div class="muted">暂无捕获消息。运行 <span class="mono">npm run lark-runtime:once</span> 后会显示真实群聊消息。</div>`;
+  return `<div class="msg-list">${messages.map((m) => `<div class="msg-card"><div class="msg-meta"><span class="pill">${escapeHtml(m.chat_name ?? m.chat_label ?? m.chat_id ?? "飞书群")}</span><span>${escapeHtml(m.sender ?? "unknown")}</span><span class="mono">${escapeHtml(formatTime(m.timestamp))}</span><span class="mono">${escapeHtml(short(m.id ?? "", 18))}</span></div><div class="msg-text">${escapeHtml(short(m.text ?? "", 240))}</div></div>`).join("")}</div>`;
+}
+
+function runtimeSummary(items: any[]): string {
+  if (!items.length) return `<div class="muted">暂无 runtime 日志</div>`;
+  const latest = items[0] as any;
+  const activations = latest.activations ?? latest.result?.activations ?? {};
+  return `<table><tbody>
+    <tr><td>最近读取</td><td class="mono">${escapeHtml(latest.fetched ?? latest.result?.fetched ?? 0)} 条</td></tr>
+    <tr><td>新增消息</td><td class="mono">${escapeHtml(latest.new_messages ?? latest.result?.new_messages ?? 0)} 条</td></tr>
+    <tr><td>归纳入队</td><td class="mono">${escapeHtml(latest.enqueued ?? latest.result?.enqueued ?? 0)} 条</td></tr>
+    <tr><td>已发卡片</td><td class="mono">${escapeHtml(latest.sent_total ?? latest.result?.sent_total ?? 0)} 张</td></tr>
+    <tr><td>Activation</td><td><pre>${escapeHtml(JSON.stringify(activations))}</pre></td></tr>
+  </tbody></table>`;
+}
+
 function logTable(items: unknown[]): string {
   if (!items.length) return `<div class="muted">暂无日志</div>`;
   return `<table><tbody>${items.map((item) => `<tr><td><pre>${escapeHtml(short(JSON.stringify(item, null, 2), 520))}</pre></td></tr>`).join("")}</tbody></table>`;
@@ -247,6 +298,17 @@ function readJsonlSafe(path: string): unknown[] {
 
 function short(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max)}…` : text;
+}
+
+function formatTime(value: unknown): string {
+  if (typeof value === "number" && value > 0) return new Date(value).toLocaleString("zh-CN", { hour12: false });
+  if (typeof value === "string") {
+    const n = Number(value);
+    if (Number.isFinite(n) && n > 0) return new Date(n).toLocaleString("zh-CN", { hour12: false });
+    const d = Date.parse(value);
+    if (!Number.isNaN(d)) return new Date(d).toLocaleString("zh-CN", { hour12: false });
+  }
+  return "";
 }
 
 function escapeHtml(value: unknown): string {

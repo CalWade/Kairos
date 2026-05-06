@@ -51,6 +51,14 @@ export type LarkRuntimeCycleResult = {
   induction_processed: number;
   activations: Record<string, number>;
   sent_total: number;
+  recent_messages: Array<{
+    id: string;
+    sender: string;
+    text: string;
+    timestamp: number;
+    chat_id?: string;
+    chat_name?: string;
+  }>;
   errors: string[];
 };
 
@@ -146,6 +154,14 @@ export async function runLarkRuntimeCycle(options: LarkRuntimeOptions): Promise<
     induction_processed: inductionProcessed,
     activations: activationCounts,
     sent_total: sentTotal,
+    recent_messages: newMessages.slice(-10).map((message) => ({
+      id: message.id,
+      sender: message.sender,
+      text: message.text,
+      timestamp: message.timestamp,
+      chat_id: message.chat_id,
+      chat_name: options.chatName,
+    })),
     errors,
   };
   appendRuntimeLog(options.runtimeLogPath ?? "runs/lark-runtime.jsonl", result);
