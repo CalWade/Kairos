@@ -23,7 +23,7 @@ import { RefineQueue } from "./refine/queue.js";
 import { applyRefinePatch, triageRefineJob } from "./refine/processor.js";
 import { formatRecallAnswer } from "./memory/recallFormatter.js";
 import { redactWebhookUrl, sendFeishuInteractiveWebhook } from "./feishuWebhook.js";
-import { loadEnvValue } from "./llm/config.js";
+import { describeLlmConfig, loadEnvValue, testLlmConnection } from "./llm/config.js";
 import { runFeishuWorkflow } from "./workflow/feishuWorkflow.js";
 import { ActivationThrottle } from "./workflow/activationThrottle.js";
 import { buildEngineDashboardData, serveEngineDashboard, writeEngineDashboardHtml } from "./visualization/dashboard.js";
@@ -272,6 +272,18 @@ function renderDoctorPretty(report: { ok: boolean; profile: string; chat_id?: st
   return lines.join("\n");
 }
 
+program
+  .command("llm:check")
+  .option("--test", "实际请求一次模型，验证连通性")
+  .description("检查 Kairos LLM 配置；真实群聊解缠和慢速归纳依赖该配置")
+  .action(async (opts) => {
+    const config = describeLlmConfig();
+    const connection = opts.test ? await testLlmConnection() : undefined;
+    const ok = config.ok && (!opts.test || !!connection?.ok);
+    console.log(JSON.stringify({ ok, command: "llm:check", config, connection, next: ok ? undefined : "配置 .env: KAIROS_LLM_BASE_URL / KAIROS_LLM_API_KEY / KAIROS_LLM_MODEL" }, null, 2));
+    if (!ok) process.exitCode = 1;
+  });
+
 const larkCli = program
   .command("lark-cli")
   .description("官方 lark-cli 适配层（当前仅做本地状态检查，不触发授权或数据读取）");
@@ -285,6 +297,7 @@ larkCli
   .option("--write-env", "把 profile/chat_id/webhook 写入 .env")
   .option("--test-read", "测试读取目标群最近消息")
   .option("--test-webhook", "发送一条测试卡片到 webhook 绑定群")
+  .option("--test-llm", "实际请求一次 LLM，验证模型连通性")
   .description("lark-runtime 接入向导：检查 lark-cli/profile/chat_id/webhook，并可写入 .env")
   .action(async (opts) => {
     const profile = nonEmpty(opts.profile) ?? loadEnvValue("KAIROS_LARK_PROFILE") ?? "kairos-alt";
@@ -299,6 +312,18 @@ larkCli
     checks.push({ name: "chat_messages scope", ok: preflight.missing_scopes.length === 0, detail: { missing_scopes: preflight.missing_scopes }, next: preflight.recommended_command?.join(" ") });
     checks.push({ name: "KAIROS_CHAT_ID", ok: !!chatId, detail: chatId, next: `lark-cli im +chat-list --format json --profile ${profile}` });
     checks.push({ name: "KAIROS_FEISHU_WEBHOOK_URL", ok: !!webhook, detail: webhook ? redactWebhookUrl(webhook) : undefined, next: "在目标飞书群添加自定义机器人，复制 webhook" });
+    const llmConfig = describeLlmConfig();
+    checks.push({
+      name: "LLM config",
+      ok: llmConfig.ok,
+      detail: { base_url: llmConfig.baseUrl, model: llmConfig.model, has_api_key: llmConfig.hasApiKey, missing: llmConfig.missing },
+      next: "在 .env 中配置 KAIROS_LLM_BASE_URL / KAIROS_LLM_API_KEY / KAIROS_LLM_MODEL；真实群聊解缠和慢速归纳依赖该配置。",
+    });
+
+    if (opts.testLlm) {
+      const llmTest = await testLlmConnection();
+      checks.push({ name: "LLM connection", ok: llmTest.ok, detail: llmTest, next: "检查模型地址、API Key、模型名和网络连通性" });
+    }
 
     if (chatId && !chatName) {
       try {

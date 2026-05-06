@@ -24,7 +24,23 @@ lark-cli auth login --recommend --profile kairos-alt
 - `auth login` 命令需要保持运行，直到浏览器授权完成并返回成功；
 - 不要反复运行 `lark-cli config init --new`，避免创建多个 CLI 应用。
 
-## 3. 获取目标群 chat_id
+## 3. 配置 LLM 判断模型
+
+真实群聊会话解缠和慢速归纳依赖 OpenAI-compatible LLM。`.env` 中需要配置：
+
+```bash
+KAIROS_LLM_BASE_URL=https://example.com/v1
+KAIROS_LLM_API_KEY=sk-xxx
+KAIROS_LLM_MODEL=your-model
+```
+
+检查：
+
+```bash
+npm run dev -- llm:check
+```
+
+## 4. 获取目标群 chat_id
 
 ```bash
 lark-cli im +chat-list --format json --profile kairos-alt
@@ -32,7 +48,7 @@ lark-cli im +chat-list --format json --profile kairos-alt
 
 或用消息搜索结果里的 `chat_id`。
 
-## 4. 配置目标群机器人 webhook
+## 5. 配置目标群机器人 webhook
 
 在目标飞书群添加自定义机器人，复制 webhook：
 
@@ -42,7 +58,7 @@ https://open.feishu.cn/open-apis/bot/v2/hook/xxxx
 
 webhook 必须来自同一个目标群。
 
-## 5. 运行接入向导
+## 6. 运行接入向导
 
 ```bash
 npm run setup:lark-runtime -- \
@@ -57,7 +73,7 @@ npm run setup:lark-runtime -- \
 
 写入后，`npm run lark-runtime` 和 `npm run lark-runtime:once` 会自动读取 `.env`，不需要手动 `export KAIROS_CHAT_ID`。
 
-## 6. 启动
+## 7. 启动
 
 终端 1：
 
@@ -77,7 +93,7 @@ npm run lark-runtime
 http://127.0.0.1:8787
 ```
 
-## 7. 调试
+## 8. 调试
 
 只跑一轮 runtime：
 
@@ -97,7 +113,7 @@ npm run dev -- lark-cli runtime --chat-id oc_xxx --profile kairos-alt --once
 npm run eval:core
 ```
 
-## 8. OpenClaw 的角色
+## 9. OpenClaw 的角色
 
 OpenClaw 在本项目中体现为：
 

@@ -44,7 +44,29 @@ lark-cli auth login --recommend --profile kairos-alt
 lark-cli auth status --profile kairos-alt
 ```
 
-## 3. 获取 chat_id
+## 3. 配置 LLM 判断模型
+
+真实群聊会话解缠和慢速归纳依赖 OpenAI-compatible LLM。`.env` 中需要包含：
+
+```bash
+KAIROS_LLM_BASE_URL=https://example.com/v1
+KAIROS_LLM_API_KEY=sk-xxx
+KAIROS_LLM_MODEL=your-model
+```
+
+检查配置：
+
+```bash
+npm run dev -- llm:check
+```
+
+需要实际连通性测试时运行：
+
+```bash
+npm run dev -- llm:check --test
+```
+
+## 4. 获取 chat_id
 
 ```bash
 lark-cli im +chat-list --format json --profile kairos-alt
@@ -58,13 +80,13 @@ lark-cli im +messages-search --query "群里最近一条独特消息" --format j
 
 找到 `oc_xxx` 形式的 `chat_id`。
 
-## 4. 配置 webhook
+## 5. 配置 webhook
 
 在目标飞书群添加自定义机器人，复制 webhook。
 
 要求：webhook 必须来自被监听的同一个群。
 
-## 5. 接入向导
+## 6. 接入向导
 
 ```bash
 npm run setup:lark-runtime -- \
@@ -72,8 +94,11 @@ npm run setup:lark-runtime -- \
   --chat-id oc_xxx \
   --feishu-webhook "https://open.feishu.cn/open-apis/bot/v2/hook/xxx" \
   --test-read \
-  --test-webhook
+  --test-webhook \
+  --test-llm
 ```
+
+如果不想在 setup 阶段实际请求模型，可以去掉 `--test-llm`；setup 仍会检查 LLM 配置项是否完整。
 
 该命令会检查权限、测试读取消息、测试发卡，并写入 `.env`。
 
@@ -85,7 +110,7 @@ npm run setup:lark-runtime -- --chat-id oc_xxx --chat-name "Kairos Demo 群" --p
 
 写入后，runtime 会自动读取 `.env`；不需要在每个终端里手动 `export KAIROS_CHAT_ID`。
 
-## 6. 启动
+## 7. 启动
 
 ```bash
 npm run dashboard
@@ -98,7 +123,7 @@ npm run lark-runtime
 npm run lark-runtime:once
 ```
 
-## 7. 排障
+## 8. 排障
 
 ### 授权反复不生效
 
@@ -160,7 +185,7 @@ http://127.0.0.1:8787
 要不我们还是用 PostgreSQL？
 ```
 
-## 8. 运行数据文件
+## 9. 运行数据文件
 
 ```text
 data/memory.jsonl                 MemoryAtom snapshot
