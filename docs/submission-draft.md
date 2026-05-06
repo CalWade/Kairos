@@ -142,7 +142,7 @@ npm run demo:inject -- --script storage-decision   # 终端 3 注入 6 条 demo 
 - **必须 OpenAI-compatible**：避免被 vendor 锁定，`src/llm/config.ts::buildOpenAIChatBody` 统一抽象
 - **结构化 JSON 能力**：主路径要求产出严格 JSON，测试 DeepSeek-v4-Flash / Doubao / OpenAI 均可
 - **reasoning vs flash**：thread linking / 抽取用 flash 类（低延迟、结构化稳定）；reasoning 类开启 `thinking.disabled`
-- **本次默认**：DeepSeek-v4-Flash，实测每次调用 3-5s，单轮 runtime 17s 总延迟
+- **本次默认**：OpenAI-compatible 低延迟模型 endpoint；实测可接入 DeepSeek / 火山方舟等兼容模型，单轮 runtime 17s 总延迟
 
 #### D. 引入 AI 后对工作流的改变
 
