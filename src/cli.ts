@@ -2,6 +2,8 @@
 import { Command } from "commander";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { createInterface } from "node:readline/promises";
+import { stdin as input, stdout as output } from "node:process";
 import { MemoryAtomSchema } from "./memory/schema.js";
 import { createManualMemory } from "./memory/factory.js";
 import { createMemoryStore } from "./memory/storeFactory.js";
@@ -138,6 +140,25 @@ function quoteEnvValue(value: string): string {
 
 function nonEmpty(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+async function askLine(question: string): Promise<string> {
+  const rl = createInterface({ input, output });
+  try {
+    return (await rl.question(question)).trim();
+  } finally {
+    rl.close();
+  }
+}
+
+async function collectLlmConfigInteractively(): Promise<Record<string, string> | undefined> {
+  const choice = (await askLine("LLM 配置缺失。现在填写吗？[Y/n] ")).toLowerCase();
+  if (choice === "n" || choice === "no" || choice === "skip") return undefined;
+  const baseUrl = await askLine("KAIROS_LLM_BASE_URL: ");
+  const apiKey = await askLine("KAIROS_LLM_API_KEY: ");
+  const model = await askLine("KAIROS_LLM_MODEL: ");
+  if (!baseUrl || !apiKey || !model) throw new Error("LLM 配置未填完整；如需跳过，请在提示时输入 n");
+  return { KAIROS_LLM_BASE_URL: baseUrl, KAIROS_LLM_API_KEY: apiKey, KAIROS_LLM_MODEL: model };
 }
 
 function conversationThreadsFromLlm(messages: ReturnType<typeof toNormalizedMessages>, llmThreads: Array<{ id: string; message_ids: string[]; topic_hint?: string; confidence: number }>): ConversationThread[] {
@@ -297,6 +318,10 @@ larkCli
   .option("--write-env", "把 profile/chat_id/webhook 写入 .env")
   .option("--test-read", "测试读取目标群最近消息")
   .option("--test-webhook", "发送一条测试卡片到 webhook 绑定群")
+  .option("--llm-base-url <url>", "LLM OpenAI-compatible base URL，写入 KAIROS_LLM_BASE_URL")
+  .option("--llm-api-key <key>", "LLM API Key，写入 KAIROS_LLM_API_KEY")
+  .option("--llm-model <model>", "LLM 模型名，写入 KAIROS_LLM_MODEL")
+  .option("--skip-llm", "暂时跳过 LLM 配置；runtime 会降级使用 fallback")
   .option("--test-llm", "实际请求一次 LLM，验证模型连通性")
   .description("lark-runtime 接入向导：检查 lark-cli/profile/chat_id/webhook，并可写入 .env")
   .action(async (opts) => {
@@ -304,6 +329,26 @@ larkCli
     const chatId = nonEmpty(opts.chatId) ?? loadEnvValue("KAIROS_CHAT_ID");
     const webhook = nonEmpty(opts.feishuWebhook) ?? loadEnvValue("KAIROS_FEISHU_WEBHOOK_URL");
     let chatName = nonEmpty(opts.chatName) ?? loadEnvValue("KAIROS_CHAT_NAME");
+    const llmCliValues = {
+      ...(nonEmpty(opts.llmBaseUrl) ? { KAIROS_LLM_BASE_URL: nonEmpty(opts.llmBaseUrl)! } : {}),
+      ...(nonEmpty(opts.llmApiKey) ? { KAIROS_LLM_API_KEY: nonEmpty(opts.llmApiKey)! } : {}),
+      ...(nonEmpty(opts.llmModel) ? { KAIROS_LLM_MODEL: nonEmpty(opts.llmModel)! } : {}),
+    };
+    if (opts.writeEnv && Object.keys(llmCliValues).length) upsertEnvFile(".env", llmCliValues);
+
+    let llmSkipped = !!opts.skipLlm;
+    let llmPromptValues: Record<string, string> | undefined;
+    let llmConfig = describeLlmConfig();
+    if (opts.writeEnv && !llmConfig.ok && !llmSkipped && process.stdin.isTTY) {
+      llmPromptValues = await collectLlmConfigInteractively();
+      if (llmPromptValues) {
+        upsertEnvFile(".env", llmPromptValues);
+        llmConfig = describeLlmConfig();
+      } else {
+        llmSkipped = true;
+      }
+    }
+
     const status = checkLarkCliStatus({ checkAuth: true, profile });
     const preflight = preflightLarkCliPurpose("chat_messages", { profile });
     const checks = [] as Array<{ name: string; ok: boolean; detail?: unknown; next?: string }>;
@@ -312,12 +357,13 @@ larkCli
     checks.push({ name: "chat_messages scope", ok: preflight.missing_scopes.length === 0, detail: { missing_scopes: preflight.missing_scopes }, next: preflight.recommended_command?.join(" ") });
     checks.push({ name: "KAIROS_CHAT_ID", ok: !!chatId, detail: chatId, next: `lark-cli im +chat-list --format json --profile ${profile}` });
     checks.push({ name: "KAIROS_FEISHU_WEBHOOK_URL", ok: !!webhook, detail: webhook ? redactWebhookUrl(webhook) : undefined, next: "在目标飞书群添加自定义机器人，复制 webhook" });
-    const llmConfig = describeLlmConfig();
     checks.push({
       name: "LLM config",
-      ok: llmConfig.ok,
-      detail: { base_url: llmConfig.baseUrl, model: llmConfig.model, has_api_key: llmConfig.hasApiKey, missing: llmConfig.missing },
-      next: "在 .env 中配置 KAIROS_LLM_BASE_URL / KAIROS_LLM_API_KEY / KAIROS_LLM_MODEL；真实群聊解缠和慢速归纳依赖该配置。",
+      ok: llmConfig.ok || llmSkipped,
+      detail: { base_url: llmConfig.baseUrl, model: llmConfig.model, has_api_key: llmConfig.hasApiKey, missing: llmConfig.missing, skipped: llmSkipped },
+      next: llmSkipped
+        ? "已暂时跳过 LLM；真实群聊会话解缠和慢速归纳会降级，建议正式演示前补齐配置。"
+        : "现在填写：直接运行 npm run setup:lark-runtime -- ...，按提示输入；或传 --llm-base-url / --llm-api-key / --llm-model；也可用 --skip-llm 暂时跳过。",
     });
 
     if (opts.testLlm) {
@@ -362,6 +408,8 @@ larkCli
         KAIROS_CHAT_ID: chatId,
         ...(chatName ? { KAIROS_CHAT_NAME: chatName } : {}),
         ...(webhook ? { KAIROS_FEISHU_WEBHOOK_URL: webhook } : {}),
+        ...(llmPromptValues ?? {}),
+        ...llmCliValues,
       });
       checks.push({ name: "write .env", ok: true, detail: ".env" });
     }
@@ -376,7 +424,8 @@ larkCli
       chat_name: chatName,
       checks,
       official_lark_cli_auth_note: "授权请按 lark-cli 官方 auth login 页面完成；不要反复运行 config init --new；授权命令需要保持运行直到成功返回。",
-      next: ok ? ["npm run dashboard", "npm run lark-runtime"] : checks.find((c) => !c.ok)?.next,
+      llm_skipped: llmSkipped,
+      next: ok ? (llmSkipped ? ["npm run dashboard", "npm run lark-runtime", "建议正式演示前补齐 LLM 配置"] : ["npm run dashboard", "npm run lark-runtime"]) : checks.find((c) => !c.ok)?.next,
     }, null, 2));
   });
 

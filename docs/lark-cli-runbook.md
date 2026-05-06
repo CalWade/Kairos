@@ -60,6 +60,23 @@ KAIROS_LLM_MODEL=your-model
 npm run dev -- llm:check
 ```
 
+如果初始化时缺少 LLM 配置，`setup:lark-runtime` 会进入引导式填写：
+
+```text
+LLM 配置缺失。现在填写吗？[Y/n]
+KAIROS_LLM_BASE_URL:
+KAIROS_LLM_API_KEY:
+KAIROS_LLM_MODEL:
+```
+
+赶时间也可以暂时跳过：
+
+```bash
+npm run setup:lark-runtime -- --skip-llm ...
+```
+
+跳过后 runtime 会降级使用 fallback；正式演示前建议补齐 LLM 配置。
+
 需要实际连通性测试时运行：
 
 ```bash
@@ -98,7 +115,7 @@ npm run setup:lark-runtime -- \
   --test-llm
 ```
 
-如果不想在 setup 阶段实际请求模型，可以去掉 `--test-llm`；setup 仍会检查 LLM 配置项是否完整。
+如果不想在 setup 阶段实际请求模型，可以去掉 `--test-llm`；setup 仍会检查 LLM 配置项是否完整。若配置缺失，向导会提示填写，也可以用 `--skip-llm` 暂时跳过。
 
 该命令会检查权限、测试读取消息、测试发卡，并写入 `.env`。
 
