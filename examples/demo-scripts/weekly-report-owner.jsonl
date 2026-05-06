@@ -1,0 +1,4 @@
+{"role": "product", "text": "以后周报每周五发给 Alice。", "pause_ms": 2000}
+{"role": "engA", "text": "收到。", "pause_ms": 1500}
+{"role": "product", "text": "不对，周报以后发给 Bob，Alice 不再负责这个了。", "pause_ms": 2500}
+{"role": "engB", "text": "好的，从下周开始我来接这块。", "pause_ms": 1500}

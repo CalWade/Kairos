@@ -22,7 +22,9 @@
     "lark-runtime:once": "tsx src/cli.ts lark-cli runtime --llm-thread-link --fallback --once",
     "setup:lark-runtime": "tsx src/cli.ts lark-cli runtime-setup --write-env",
     "setup:lark-runtime:check": "tsx src/cli.ts lark-cli runtime-setup --test-read",
-    "demo:reset-state": "bash scripts/reset-demo-state.sh"
+    "demo:reset-state": "bash scripts/reset-demo-state.sh",
+    "demo:inject": "node scripts/demo-inject.mjs",
+    "demo:inject:list": "node scripts/demo-inject.mjs --list"
   },
   "keywords": [
     "memory",
