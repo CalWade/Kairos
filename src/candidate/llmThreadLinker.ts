@@ -35,7 +35,7 @@ export async function linkThreadsWithLlm(messages: NormalizedMessage[], options:
   }
   const limited = messages.slice(0, options.maxMessages ?? 40);
   try {
-    const content = await callOpenAICompatible(config, buildPrompt(limited), options.timeoutMs ?? 30_000, options.fetchImpl ?? fetch);
+    const content = await callOpenAICompatible(config, buildPrompt(limited), options.timeoutMs ?? 90_000, options.fetchImpl ?? fetch);
     const parsed = normalizeThreadResult(JSON.parse(extractJsonObject(content)), limited);
     return { ok: true, degraded: false, prompt_version: LLM_THREAD_LINKER_PROMPT_VERSION, threads: parsed };
   } catch (error) {

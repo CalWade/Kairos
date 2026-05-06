@@ -38,4 +38,20 @@ describe("linkThreadsWithLlm", () => {
     expect(result.degraded).toBe(true);
     expect(result.error).toBeTruthy();
   });
+
+  it("timeout 超时时降级且保留 abort 错误", async () => {
+    const slowFetch = (async (_url: unknown, init?: RequestInit) => {
+      return await new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+      });
+    }) as unknown as typeof fetch;
+    const result = await linkThreadsWithLlm([msg("m1", "测试")], {
+      config: { provider: "openai_compatible", baseUrl: "https://example.com/v1", apiKey: "k", model: "m" },
+      fetchImpl: slowFetch,
+      timeoutMs: 50,
+    });
+    expect(result.degraded).toBe(true);
+    expect(result.error).toMatch(/abort/i);
+    expect(result.threads[0].message_ids).toEqual(["m1"]);
+  });
 });
