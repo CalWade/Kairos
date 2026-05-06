@@ -117,9 +117,17 @@ grep KAIROS_FEISHU_WEBHOOK_URL .env
 
 并确认 webhook 属于目标群。
 
-### Dashboard 无数据
+### Dashboard 无数据或停留在旧记忆
 
-先确认 `.env` 已写入目标群配置：
+Dashboard 默认读取 `runs/lark-runtime.jsonl`、`data/memory.jsonl` 和队列文件。如果页面还显示旧的测试记忆，先把 demo 状态归档重置：
+
+```bash
+npm run demo:reset-state
+```
+
+该命令只移动本地 demo 数据文件到 `runs/archive/`，不会修改 `.env`。
+
+然后确认 `.env` 已写入目标群配置：
 
 ```bash
 grep -E 'KAIROS_CHAT_ID|KAIROS_LARK_PROFILE|KAIROS_FEISHU_WEBHOOK_URL' .env
@@ -154,6 +162,6 @@ data/memory_events.jsonl          Memory event log
 data/induction_queue.jsonl        归纳队列
 data/refine_queue.jsonl           修正队列
 data/activation_throttle.jsonl    推卡频控
-runs/lark-runtime.jsonl           runtime 日志
+runs/lark-runtime.jsonl           runtime 日志（Dashboard 默认读取）
 runs/latest-eval.json             本地评测结果
 ```

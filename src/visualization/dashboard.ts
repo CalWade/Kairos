@@ -14,7 +14,7 @@ export type EngineDashboardOptions = {
   inductionQueuePath?: string;
   refineQueuePath?: string;
   activationThrottlePath?: string;
-  hookLogPath?: string;
+  runtimeLogPath?: string;
   evalResultPath?: string;
 };
 
@@ -25,7 +25,7 @@ export type EngineDashboardData = {
   induction_jobs: unknown[];
   refine_jobs: unknown[];
   activations: unknown[];
-  hook_logs: unknown[];
+  runtime_logs: unknown[];
   eval_results: unknown[];
 };
 
@@ -34,7 +34,7 @@ export function buildEngineDashboardData(options: EngineDashboardOptions): Engin
   const inductionQueuePath = options.inductionQueuePath ?? "data/induction_queue.jsonl";
   const refineQueuePath = options.refineQueuePath ?? "data/refine_queue.jsonl";
   const activationThrottlePath = options.activationThrottlePath ?? "data/activation_throttle.jsonl";
-  const hookLogPath = options.hookLogPath ?? "runs/kairos-feishu-ingress.jsonl";
+  const runtimeLogPath = options.runtimeLogPath ?? "runs/lark-runtime.jsonl";
   const evalResultPath = options.evalResultPath ?? "runs/latest-eval.json";
   const throttle = new ActivationThrottle(activationThrottlePath);
   return {
@@ -44,7 +44,7 @@ export function buildEngineDashboardData(options: EngineDashboardOptions): Engin
     induction_jobs: new InductionQueue(inductionQueuePath).list({ limit: 100 }),
     refine_jobs: new RefineQueue(refineQueuePath).list({ limit: 100 }),
     activations: [...throttle.latest().values()],
-    hook_logs: readJsonlSafe(hookLogPath).slice(-100),
+    runtime_logs: readJsonlSafe(runtimeLogPath).slice(-100),
     eval_results: readEvalResults(evalResultPath).slice(-20),
   };
 }
@@ -56,7 +56,7 @@ export function writeEngineDashboardHtml(data: EngineDashboardData, outputPath: 
 }
 
 export function renderEngineDashboardHtml(data: EngineDashboardData, options: { refreshSeconds?: number } = {}): string {
-  const latestHook = data.hook_logs.slice(-8).reverse();
+  const latestRuntime = data.runtime_logs.slice(-8).reverse();
   const latestEvents = data.events.slice(-8).reverse();
   const latestEval = data.eval_results.slice(-3).reverse();
   const induction = data.induction_jobs as any[];
@@ -125,7 +125,7 @@ export function renderEngineDashboardHtml(data: EngineDashboardData, options: { 
     <section class="card span12">
       <h2>真实工作流数据流</h2>
       <div class="flow">
-        ${flowNode("① 飞书消息进入", latestHook.length, "OpenClaw Hook / lark-cli 把真实群聊消息送入 Kairos", latestHook.length > 0)}
+        ${flowNode("① 飞书消息进入", latestRuntime.length, "lark-cli Runtime 把真实群聊消息送入 Kairos", latestRuntime.length > 0)}
         ${flowNode("② 会话解缠与归纳", induction.length, "LLM thread linking 与 induction queue 在后台理解上下文", induction.length > 0, pendingInduction.length > 0)}
         ${flowNode("③ 长期记忆生成", activeMemories.length, "MemoryAtom 保存决策、风险、约定及证据链", activeMemories.length > 0)}
         ${flowNode("④ 历史记忆激活", data.activations.length, "后续群聊触及历史决策时触发卡片提醒", data.activations.length > 0)}
@@ -147,7 +147,7 @@ export function renderEngineDashboardHtml(data: EngineDashboardData, options: { 
 
     <section class="card span6">
       <h2>最近飞书入口 / 激活日志</h2>
-      ${logTable(latestHook)}
+      ${logTable(latestRuntime)}
     </section>
 
     <section class="card span6">

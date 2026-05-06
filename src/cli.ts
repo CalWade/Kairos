@@ -1375,7 +1375,8 @@ program
   .option("--induction-queue <path>", "Induction queue JSONL 路径", "data/induction_queue.jsonl")
   .option("--refine-queue <path>", "Refine queue JSONL 路径", "data/refine_queue.jsonl")
   .option("--activation-throttle <path>", "Activation throttle JSONL 路径", "data/activation_throttle.jsonl")
-  .option("--hook-log <path>", "OpenClaw hook log 路径", "runs/kairos-feishu-ingress.jsonl")
+  .option("--runtime-log <path>", "lark-runtime JSONL 日志路径", "runs/lark-runtime.jsonl")
+  .option("--hook-log <path>", "兼容旧参数：OpenClaw hook log 路径")
   .option("--eval-result <path>", "本地评测结果 JSON 路径", "runs/latest-eval.json")
   .option("--db <path>", "SQLite/JSONL 数据路径")
   .option("--store <kind>", "存储后端 jsonl/sqlite，默认 jsonl")
@@ -1388,7 +1389,7 @@ program
       inductionQueuePath: opts.inductionQueue,
       refineQueuePath: opts.refineQueue,
       activationThrottlePath: opts.activationThrottle,
-      hookLogPath: opts.hookLog,
+      runtimeLogPath: opts.runtimeLog ?? opts.hookLog,
       evalResultPath: opts.evalResult,
     };
     if (opts.serve) {

@@ -21,7 +21,8 @@
     "lark-runtime": "tsx src/cli.ts lark-cli runtime --llm-thread-link --fallback --send-feishu-webhook",
     "lark-runtime:once": "tsx src/cli.ts lark-cli runtime --llm-thread-link --fallback --once",
     "setup:lark-runtime": "tsx src/cli.ts lark-cli runtime-setup --write-env",
-    "setup:lark-runtime:check": "tsx src/cli.ts lark-cli runtime-setup --test-read"
+    "setup:lark-runtime:check": "tsx src/cli.ts lark-cli runtime-setup --test-read",
+    "demo:reset-state": "bash scripts/reset-demo-state.sh"
   },
   "keywords": [
     "memory",
