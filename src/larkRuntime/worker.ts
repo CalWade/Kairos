@@ -16,6 +16,7 @@ import { runFeishuWorkflow } from "../workflow/feishuWorkflow.js";
 
 export type LarkRuntimeOptions = {
   chatId: string;
+  chatName?: string;
   profile?: string;
   project?: string;
   pageSize?: number;
@@ -42,6 +43,8 @@ export type LarkRuntimeCycleResult = {
   ok: boolean;
   at: string;
   chat_id: string;
+  chat_name?: string;
+  chat_label: string;
   fetched: number;
   new_messages: number;
   enqueued: number;
@@ -131,7 +134,20 @@ export async function runLarkRuntimeCycle(options: LarkRuntimeOptions): Promise<
 
   for (const m of newMessages) processed.add(m.id);
   writeRuntimeState(statePath, { processed_message_ids: [...processed].slice(-1000), last_cycle_at: at });
-  const result = { ok: errors.length === 0, at, chat_id: options.chatId, fetched: messages.length, new_messages: newMessages.length, enqueued, induction_processed: inductionProcessed, activations: activationCounts, sent_total: sentTotal, errors };
+  const result = {
+    ok: errors.length === 0,
+    at,
+    chat_id: options.chatId,
+    chat_name: options.chatName,
+    chat_label: options.chatName ? `${options.chatName} (${options.chatId})` : options.chatId,
+    fetched: messages.length,
+    new_messages: newMessages.length,
+    enqueued,
+    induction_processed: inductionProcessed,
+    activations: activationCounts,
+    sent_total: sentTotal,
+    errors,
+  };
   appendRuntimeLog(options.runtimeLogPath ?? "runs/lark-runtime.jsonl", result);
   return result;
 }

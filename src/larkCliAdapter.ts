@@ -145,6 +145,21 @@ export type LarkCliExtractedText = {
   source: string;
 };
 
+export type LarkCliChatInfo = {
+  chat_id: string;
+  name?: string;
+};
+
+export function extractChatInfoFromLarkCliJson(value: unknown, chatId: string): LarkCliChatInfo | undefined {
+  const rows = collectObjectRecords(value);
+  for (const row of rows) {
+    const id = pickChatId(row);
+    if (id !== chatId) continue;
+    return { chat_id: id, name: pickChatName(row) };
+  }
+  return undefined;
+}
+
 export function extractTextsFromLarkCliJson(value: unknown): LarkCliExtractedText[] {
   const rows = collectRecords(value);
   const result: LarkCliExtractedText[] = [];
@@ -249,6 +264,10 @@ function dedupeById(items: NormalizedMessage[]): NormalizedMessage[] {
 }
 
 function collectRecords(value: unknown): Record<string, unknown>[] {
+  return collectObjectRecords(value).filter((record) => !!pickText(record));
+}
+
+function collectObjectRecords(value: unknown): Record<string, unknown>[] {
   const result: Record<string, unknown>[] = [];
   const visit = (node: unknown) => {
     if (Array.isArray(node)) {
@@ -257,13 +276,31 @@ function collectRecords(value: unknown): Record<string, unknown>[] {
     }
     if (!node || typeof node !== "object") return;
     const record = node as Record<string, unknown>;
-    if (pickText(record)) result.push(record);
-    for (const key of ["items", "messages", "data", "results", "list"]) {
+    result.push(record);
+    for (const key of ["items", "messages", "chats", "data", "results", "list"]) {
       if (key in record) visit(record[key]);
     }
   };
   visit(value);
   return result;
+}
+
+function pickChatId(record: Record<string, unknown>): string | undefined {
+  for (const key of ["chat_id", "chatId", "id", "open_chat_id"]) {
+    const value = record[key];
+    if (typeof value === "string" && value.startsWith("oc_")) return value;
+  }
+  return undefined;
+}
+
+function pickChatName(record: Record<string, unknown>): string | undefined {
+  for (const key of ["name", "chat_name", "chatName", "title", "topic"]) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  const chat = record.chat;
+  if (chat && typeof chat === "object") return pickChatName(chat as Record<string, unknown>);
+  return undefined;
 }
 
 function pickText(record: Record<string, unknown>): string | undefined {

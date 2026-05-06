@@ -57,6 +57,13 @@ export function writeEngineDashboardHtml(data: EngineDashboardData, outputPath: 
 
 export function renderEngineDashboardHtml(data: EngineDashboardData, options: { refreshSeconds?: number } = {}): string {
   const latestRuntime = data.runtime_logs.slice(-8).reverse();
+  const latestRuntimeLabel = typeof (latestRuntime[0] as any)?.chat_label === "string"
+    ? (latestRuntime[0] as any).chat_label
+    : typeof (latestRuntime[0] as any)?.chat_name === "string"
+      ? `${(latestRuntime[0] as any).chat_name} (${(latestRuntime[0] as any).chat_id ?? ""})`
+      : typeof (latestRuntime[0] as any)?.chat_id === "string"
+        ? (latestRuntime[0] as any).chat_id
+        : "等待 runtime 日志";
   const latestEvents = data.events.slice(-8).reverse();
   const latestEval = data.eval_results.slice(-3).reverse();
   const induction = data.induction_jobs as any[];
@@ -125,7 +132,7 @@ export function renderEngineDashboardHtml(data: EngineDashboardData, options: { 
     <section class="card span12">
       <h2>真实工作流数据流</h2>
       <div class="flow">
-        ${flowNode("① 飞书消息进入", latestRuntime.length, "lark-cli Runtime 把真实群聊消息送入 Kairos", latestRuntime.length > 0)}
+        ${flowNode("① 飞书消息进入", latestRuntime.length, `来源：${latestRuntimeLabel}`, latestRuntime.length > 0)}
         ${flowNode("② 会话解缠与归纳", induction.length, "LLM thread linking 与 induction queue 在后台理解上下文", induction.length > 0, pendingInduction.length > 0)}
         ${flowNode("③ 长期记忆生成", activeMemories.length, "MemoryAtom 保存决策、风险、约定及证据链", activeMemories.length > 0)}
         ${flowNode("④ 历史记忆激活", data.activations.length, "后续群聊触及历史决策时触发卡片提醒", data.activations.length > 0)}
@@ -147,6 +154,7 @@ export function renderEngineDashboardHtml(data: EngineDashboardData, options: { 
 
     <section class="card span6">
       <h2>最近飞书入口 / 激活日志</h2>
+      <div class="muted" style="margin-bottom:10px">最新来源：${escapeHtml(latestRuntimeLabel)}</div>
       ${logTable(latestRuntime)}
     </section>
 

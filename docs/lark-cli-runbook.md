@@ -77,6 +77,12 @@ npm run setup:lark-runtime -- \
 
 该命令会检查权限、测试读取消息、测试发卡，并写入 `.env`。
 
+写入时会尽量通过 `lark-cli im +chat-list` 自动解析群名称，保存为 `KAIROS_CHAT_NAME`，Dashboard 会显示「群名称 + chat_id」。如果自动解析不到，可以手动传：
+
+```bash
+npm run setup:lark-runtime -- --chat-id oc_xxx --chat-name "Kairos Demo 群" --profile kairos-alt
+```
+
 写入后，runtime 会自动读取 `.env`；不需要在每个终端里手动 `export KAIROS_CHAT_ID`。
 
 ## 6. 启动
@@ -130,7 +136,7 @@ npm run demo:reset-state
 然后确认 `.env` 已写入目标群配置：
 
 ```bash
-grep -E 'KAIROS_CHAT_ID|KAIROS_LARK_PROFILE|KAIROS_FEISHU_WEBHOOK_URL' .env
+grep -E 'KAIROS_CHAT_ID|KAIROS_CHAT_NAME|KAIROS_LARK_PROFILE|KAIROS_FEISHU_WEBHOOK_URL' .env
 ```
 
 然后运行：

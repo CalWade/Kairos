@@ -15,14 +15,14 @@ describe("Engine Dashboard", () => {
       const evalPath = join(dir, "latest-eval.json");
       const runtimeLogPath = join(dir, "lark-runtime.jsonl");
       writeFileSync(evalPath, JSON.stringify({ at: "2026-05-06T00:00:00.000Z", mode: "core", results: [{ suite: "recall", total: 1, passed: 1, failed: 0 }] }));
-      writeFileSync(runtimeLogPath, JSON.stringify({ ok: true, chat_id: "oc_demo", fetched: 3, new_messages: 1, activations: { ignore: 1 } }) + "\n");
+      writeFileSync(runtimeLogPath, JSON.stringify({ ok: true, chat_id: "oc_demo", chat_name: "Kairos Demo 群", chat_label: "Kairos Demo 群 (oc_demo)", fetched: 3, new_messages: 1, activations: { ignore: 1 } }) + "\n");
       const data = buildEngineDashboardData({ store, eventsPath: join(dir, "events.jsonl"), inductionQueuePath: join(dir, "induction.jsonl"), refineQueuePath: join(dir, "refine.jsonl"), activationThrottlePath: join(dir, "activation.jsonl"), runtimeLogPath, evalResultPath: evalPath });
       const html = renderEngineDashboardHtml(data);
       expect(html).toContain("Kairos 引擎工作流可视化");
       expect(html).toContain("复赛阶段使用 SQLite");
       expect(html).toContain("飞书消息进入");
       expect(html).toContain("长期记忆生成");
-      expect(html).toContain("oc_demo");
+      expect(html).toContain("Kairos Demo 群 (oc_demo)");
       expect(html).toContain("本地评测结果");
       expect(html).toContain("recall");
       const output = join(dir, "dashboard.html");

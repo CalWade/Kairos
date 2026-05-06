@@ -27,7 +27,7 @@ import { loadEnvValue } from "./llm/config.js";
 import { runFeishuWorkflow } from "./workflow/feishuWorkflow.js";
 import { ActivationThrottle } from "./workflow/activationThrottle.js";
 import { buildEngineDashboardData, serveEngineDashboard, writeEngineDashboardHtml } from "./visualization/dashboard.js";
-import { buildLarkCliPlan, checkLarkCliStatus, extractTextsFromLarkCliJson, preflightLarkCliPurpose, runLarkCliJson, runLarkCliText, toNormalizedMessages } from "./larkCliAdapter.js";
+import { buildLarkCliPlan, checkLarkCliStatus, extractChatInfoFromLarkCliJson, extractTextsFromLarkCliJson, preflightLarkCliPurpose, runLarkCliJson, runLarkCliText, toNormalizedMessages } from "./larkCliAdapter.js";
 import { runLarkRuntime } from "./larkRuntime/worker.js";
 import { threadMessages, type ConversationThread } from "./candidate/thread.js";
 import { linkThreadsWithLlm } from "./candidate/llmThreadLinker.js";
@@ -281,6 +281,7 @@ larkCli
   .option("--profile <profile>", "lark-cli profile", "kairos-alt")
   .option("--chat-id <chatId>", "要监听的飞书群 chat_id；也可读取 KAIROS_CHAT_ID")
   .option("--feishu-webhook <url>", "飞书机器人 webhook；也可读取 KAIROS_FEISHU_WEBHOOK_URL")
+  .option("--chat-name <name>", "可选：目标群名称；不传时尽量通过 lark-cli chat-list 自动解析")
   .option("--write-env", "把 profile/chat_id/webhook 写入 .env")
   .option("--test-read", "测试读取目标群最近消息")
   .option("--test-webhook", "发送一条测试卡片到 webhook 绑定群")
@@ -289,6 +290,7 @@ larkCli
     const profile = nonEmpty(opts.profile) ?? loadEnvValue("KAIROS_LARK_PROFILE") ?? "kairos-alt";
     const chatId = nonEmpty(opts.chatId) ?? loadEnvValue("KAIROS_CHAT_ID");
     const webhook = nonEmpty(opts.feishuWebhook) ?? loadEnvValue("KAIROS_FEISHU_WEBHOOK_URL");
+    let chatName = nonEmpty(opts.chatName) ?? loadEnvValue("KAIROS_CHAT_NAME");
     const status = checkLarkCliStatus({ checkAuth: true, profile });
     const preflight = preflightLarkCliPurpose("chat_messages", { profile });
     const checks = [] as Array<{ name: string; ok: boolean; detail?: unknown; next?: string }>;
@@ -297,6 +299,13 @@ larkCli
     checks.push({ name: "chat_messages scope", ok: preflight.missing_scopes.length === 0, detail: { missing_scopes: preflight.missing_scopes }, next: preflight.recommended_command?.join(" ") });
     checks.push({ name: "KAIROS_CHAT_ID", ok: !!chatId, detail: chatId, next: `lark-cli im +chat-list --format json --profile ${profile}` });
     checks.push({ name: "KAIROS_FEISHU_WEBHOOK_URL", ok: !!webhook, detail: webhook ? redactWebhookUrl(webhook) : undefined, next: "在目标飞书群添加自定义机器人，复制 webhook" });
+
+    if (chatId && !chatName) {
+      try {
+        const chatListRaw = runLarkCliJson(["im", "+chat-list", "--format", "json", "--profile", profile]);
+        chatName = extractChatInfoFromLarkCliJson(chatListRaw, chatId)?.name;
+      } catch {}
+    }
 
     let readResult;
     if (opts.testRead && chatId) {
@@ -326,6 +335,7 @@ larkCli
         KAIROS_PROJECT: "kairos",
         KAIROS_LARK_PROFILE: profile,
         KAIROS_CHAT_ID: chatId,
+        ...(chatName ? { KAIROS_CHAT_NAME: chatName } : {}),
         ...(webhook ? { KAIROS_FEISHU_WEBHOOK_URL: webhook } : {}),
       });
       checks.push({ name: "write .env", ok: true, detail: ".env" });
@@ -338,6 +348,7 @@ larkCli
       profile,
       chat_id: chatId,
       webhook: webhook ? redactWebhookUrl(webhook) : undefined,
+      chat_name: chatName,
       checks,
       official_lark_cli_auth_note: "授权请按 lark-cli 官方 auth login 页面完成；不要反复运行 config init --new；授权命令需要保持运行直到成功返回。",
       next: ok ? ["npm run dashboard", "npm run lark-runtime"] : checks.find((c) => !c.ok)?.next,
@@ -348,6 +359,7 @@ larkCli
   .command("runtime")
   .option("--chat-id <chatId>", "飞书群聊 chat_id；也可用 KAIROS_CHAT_ID")
   .option("--profile <profile>", "lark-cli profile；也可用 KAIROS_LARK_PROFILE")
+  .option("--chat-name <name>", "飞书群名称；也可用 KAIROS_CHAT_NAME，用于 Dashboard 展示")
   .option("--project <project>", "项目名", "kairos")
   .option("--interval-ms <ms>", "轮询间隔", "10000")
   .option("--page-size <size>", "每轮读取消息数", "20")
@@ -368,6 +380,7 @@ larkCli
   .action(async (opts) => {
     await runLarkRuntime({
       chatId: nonEmpty(opts.chatId) ?? loadEnvValue("KAIROS_CHAT_ID") ?? "",
+      chatName: nonEmpty(opts.chatName) ?? loadEnvValue("KAIROS_CHAT_NAME"),
       profile: nonEmpty(opts.profile) ?? loadEnvValue("KAIROS_LARK_PROFILE") ?? "kairos-alt",
       project: opts.project,
       pageSize: Number(opts.pageSize),

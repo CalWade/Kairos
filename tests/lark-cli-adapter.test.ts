@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLarkCliPlan, checkLarkCliStatus, extractTextsFromLarkCliJson, preflightLarkCliPurpose, toNormalizedMessages } from "../src/larkCliAdapter.js";
+import { buildLarkCliPlan, checkLarkCliStatus, extractChatInfoFromLarkCliJson, extractTextsFromLarkCliJson, preflightLarkCliPurpose, toNormalizedMessages } from "../src/larkCliAdapter.js";
 
 describe("lark-cli adapter", () => {
   it("status check never throws", () => {
@@ -45,6 +45,18 @@ describe("lark-cli adapter", () => {
     });
     expect(texts.map((item) => item.text)).toContain("最终决定使用 SQLite，不用 PostgreSQL。");
     expect(texts.map((item) => item.id)).toContain("om_1");
+  });
+
+  it("extractChatInfoFromLarkCliJson 从 chat-list 输出中解析群名称", () => {
+    const chat = extractChatInfoFromLarkCliJson({
+      data: {
+        items: [
+          { chat_id: "oc_demo", name: "Kairos Demo 群" },
+          { chat_id: "oc_other", name: "其他群" },
+        ],
+      },
+    }, "oc_demo");
+    expect(chat).toEqual({ chat_id: "oc_demo", name: "Kairos Demo 群" });
   });
 
   it("toNormalizedMessages 保留完整元数据供线程恢复使用", () => {
