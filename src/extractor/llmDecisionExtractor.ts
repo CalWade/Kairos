@@ -1,5 +1,5 @@
 import type { CandidateWindow } from "../candidate/window.js";
-import { chatCompletionsUrl, loadLlmConfig, type LlmConfig } from "../llm/config.js";
+import { buildOpenAIChatBody, chatCompletionsUrl, loadLlmConfig, type LlmConfig } from "../llm/config.js";
 import type { ExtractionResult } from "./decisionTypes.js";
 import { extractDecisionBaseline } from "./ruleDecisionExtractor.js";
 
@@ -98,15 +98,14 @@ async function callOpenAICompatible(config: LlmConfig, prompt: string, timeoutMs
         "Content-Type": "application/json",
         Authorization: `Bearer ${config.apiKey}`,
       },
-      body: JSON.stringify({
-        model: config.model,
+      body: JSON.stringify(buildOpenAIChatBody(config, {
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: prompt },
         ],
         temperature: 0,
-        max_tokens: 1200,
-      }),
+        maxTokens: 1200,
+      })),
       signal: controller.signal,
     });
     const text = await response.text();
@@ -127,23 +126,23 @@ async function callOpenAICompatible(config: LlmConfig, prompt: string, timeoutMs
   }
 }
 
-const SYSTEM_PROMPT = `你是 Kairos 的企业项目决策记忆抽取器。
-只返回一个 JSON 对象，不要 Markdown，不要解释。
-必须严格使用以下 kind 之一：decision, convention, risk, workflow, none。
-共同字段：kind, should_remember, reject_reason, confidence, evidence_message_ids, aliases, negative_keys, reasoning。
-如果只是未定问题、复议问题、闲聊、状态同步、噪声消息，返回 kind=none 且 should_remember=false，并写 reject_reason。
-类型边界必须遵守：
-- risk：安全边界、API Key/密钥、生产环境、前端直连、泄露、权限、故障、乱码、独立 IP、上线风险。只要内容表达“可能造成安全/稳定性/交付风险”或“必须防止某风险”，优先判 risk，不要判 convention。
-- convention：团队约定、负责人、接收人、周期性规则、命名规范、协作习惯。它不是安全风险，也不是项目方案决策。
-- decision：方案取舍、技术选型、是否采用/不采用某方案，必须有结论或拍板信号。
-只能基于 evidence_message_ids 对应文本抽取，不得补充未出现的信息。
+const SYSTEM_PROMPT = `Kairos 企业项目决策记忆抽取器。仅输出单个 JSON 对象（无 Markdown）。
 
-JSON 形状：
-- decision: {kind, should_remember, reject_reason?, confidence, evidence_message_ids, topic, decision, options_considered, reasons, rejected_options:[{option,reason}], opposition:[{speaker?,content}], conclusion, stage?, valid_at?, aliases, negative_keys, reasoning}
-- convention: {kind, should_remember, reject_reason?, confidence, evidence_message_ids, topic, rule, owner?, target?, scope, valid_at?, aliases, negative_keys, reasoning}
-- risk: {kind, should_remember, reject_reason?, confidence, evidence_message_ids, topic, risk, impact?, mitigation?, severity, review_after_days?, aliases, negative_keys, reasoning}
-- workflow: {kind, should_remember, reject_reason?, confidence, evidence_message_ids, topic, trigger?, steps, commands, expected_result?, aliases, negative_keys, reasoning}
-- none: {kind, should_remember:false, reject_reason, confidence, evidence_message_ids, aliases, negative_keys, reasoning}`;
+kind ∈ {decision, convention, risk, workflow, none}
+判定优先级：risk > decision > convention > workflow > none
+- risk：安全/密钥/泄露/生产风险/上线隐患/稳定性告警
+- decision：方案取舍、技术选型、采用/否决，必须有结论
+- convention：团队约定、负责人/接收人、周期规则、命名
+- workflow：可复用操作步骤或命令序列
+- none：未定问题、复议、闲聊、状态同步、噪声
+只基于 evidence_message_ids 文本抽取，不补充未出现的信息。should_remember=false 必须给 reject_reason。
+
+公共字段：kind, should_remember, reject_reason?, confidence, evidence_message_ids, aliases, negative_keys, reasoning
+专属字段：
+- decision +{topic, decision, options_considered, reasons, rejected_options:[{option,reason}], opposition:[{speaker?,content}], conclusion, stage?, valid_at?}
+- convention +{topic, rule, owner?, target?, scope, valid_at?}
+- risk +{topic, risk, impact?, mitigation?, severity, review_after_days?}
+- workflow +{topic, trigger?, steps, commands, expected_result?}`;
 
 function buildPrompt(window: CandidateWindow, options: { maxInputChars: number }): string {
   const truncated = window.denoised_text.length > options.maxInputChars;

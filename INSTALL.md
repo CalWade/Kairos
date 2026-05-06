@@ -40,6 +40,15 @@ KAIROS_LLM_MODEL=your-model
 npm run dev -- llm:check
 ```
 
+> 若使用火山方舟 Doubao-Seed-Thinking / 其它 reasoning 模型，建议加一行：
+>
+> ```bash
+> KAIROS_LLM_DISABLE_THINKING=1
+> ```
+>
+> 关闭 CoT 后 thread linking / 决策抽取延迟可从 30–60s 压到 3–5s，对结构化 JSON 输出基本无影响。
+> 非 reasoning 模型（OpenAI GPT-4o、Claude 等）忽略未知字段，留空即可。
+
 ## 4. 获取目标群 chat_id
 
 ```bash

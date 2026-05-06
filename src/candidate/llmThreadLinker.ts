@@ -1,5 +1,5 @@
 import type { NormalizedMessage } from "./types.js";
-import { chatCompletionsUrl, loadLlmConfig, type LlmConfig } from "../llm/config.js";
+import { buildOpenAIChatBody, chatCompletionsUrl, loadLlmConfig, type LlmConfig } from "../llm/config.js";
 
 export const LLM_THREAD_LINKER_PROMPT_VERSION = "llm-thread-linker-v0.1";
 
@@ -67,7 +67,8 @@ function buildPrompt(messages: NormalizedMessage[]): string {
       "把交错群聊消息分成若干讨论线程。",
       "只使用给定 message_id；不要编造消息。",
       "短确认、指代语、收束语应归到其回复的讨论线程；无法判断时单独成线程或低置信。",
-      "输出 JSON：{threads:[{id,message_ids,topic_hint,confidence,reasoning}]}",
+      "严格输出 JSON：{\"threads\":[{\"id\":string,\"message_ids\":string[],\"topic_hint\":string,\"confidence\":number,\"reasoning\":string}]}",
+      "字段名必须是 message_ids（复数，带下划线），不要写成 messages / ids / msgs。",
     ],
     messages: messages.map((m) => ({ id: m.id, sender: m.sender, timestamp: m.timestamp, text: m.text, thread_id: m.thread_id, reply_to: m.reply_to })),
   });
@@ -80,15 +81,14 @@ async function callOpenAICompatible(config: LlmConfig, prompt: string, timeoutMs
     const response = await fetchImpl(chatCompletionsUrl(config.baseUrl), {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
-      body: JSON.stringify({
-        model: config.model,
+      body: JSON.stringify(buildOpenAIChatBody(config, {
         messages: [
           { role: "system", content: "你是 Kairos 的会话解缠器。只返回 JSON 对象，不要 Markdown。" },
           { role: "user", content: prompt },
         ],
         temperature: 0,
-        max_tokens: 1200,
-      }),
+        maxTokens: 1200,
+      })),
       signal: controller.signal,
     });
     const text = await response.text();
@@ -121,12 +121,16 @@ function normalizeThreadResult(value: unknown, messages: NormalizedMessage[]): L
     const raw = rawThreads[i];
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
     const obj = raw as Record<string, unknown>;
-    const ids = Array.isArray(obj.message_ids) ? obj.message_ids.filter((id): id is string => typeof id === "string" && known.has(id)) : [];
+    // 兼容多种字段别名：message_ids / messages / ids / msg_ids
+    // reasoning 模型关闭 thinking 后偶尔会产出简化字段名，此处防御性覆盖。
+    const candidateArrays = [obj.message_ids, obj.messages, obj.ids, obj.msg_ids];
+    const rawIds = candidateArrays.find((value): value is unknown[] => Array.isArray(value)) ?? [];
+    const ids = rawIds.filter((id): id is string => typeof id === "string" && known.has(id));
     if (!ids.length) continue;
     result.push({
       id: typeof obj.id === "string" && obj.id.trim() ? obj.id : `llm_thread_${i}`,
       message_ids: [...new Set(ids)],
-      topic_hint: typeof obj.topic_hint === "string" ? obj.topic_hint : undefined,
+      topic_hint: typeof obj.topic_hint === "string" ? obj.topic_hint : typeof obj.theme === "string" ? obj.theme : undefined,
       confidence: clamp(typeof obj.confidence === "number" ? obj.confidence : 0.5),
       reasoning: typeof obj.reasoning === "string" ? obj.reasoning : undefined,
     });

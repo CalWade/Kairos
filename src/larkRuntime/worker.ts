@@ -100,20 +100,30 @@ export async function runLarkRuntimeCycle(options: LarkRuntimeOptions): Promise<
   }
 
   let inductionProcessed = 0;
-  for (const job of queue.list({ status: "pending", limit: 5 })) {
+  const pendingJobs = queue.list({ status: "pending", limit: 5 });
+  // LLM 调用并行（网络 I/O bound），每个 job 独立 thread link + decision extract。
+  // store/queue 写入仍走串行，避免并发写 JSONL 文件撕裂。
+  const llmResults = await Promise.all(pendingJobs.map(async (job) => {
     try {
       const threadLink = options.llmThreadLink && job.context_messages?.length ? await linkThreadsWithLlm(job.context_messages, { timeoutMs: 120_000 }) : undefined;
       const window = threadLink && !threadLink.degraded ? refineWindowWithLlmThread(job.window, job.context_messages ?? [], threadLink.threads) : job.window;
       const extraction = await extractDecisionWithLlm(window, { fallback: options.fallback ?? true });
-      const atom = extractionToMemoryAtom(extraction, window, job.project ?? options.project);
-      const reconcile = atom ? reconcileAndApplyMemoryAtom(options.store, atom) : { action: "NONE", reason: "extractor_returned_none" };
-      queue.markDone(job, { extraction, atom, reconcile, thread_linker: threadLink ? { degraded: threadLink.degraded, error: threadLink.error } : undefined });
-      inductionProcessed++;
+      return { job, ok: true as const, threadLink, window, extraction };
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      errors.push(`induction:${job.id}:${msg}`);
-      queue.markFailed(job, msg);
+      return { job, ok: false as const, error: error instanceof Error ? error.message : String(error) };
     }
+  }));
+  for (const entry of llmResults) {
+    if (!entry.ok) {
+      errors.push(`induction:${entry.job.id}:${entry.error}`);
+      queue.markFailed(entry.job, entry.error);
+      continue;
+    }
+    const { job, threadLink, window, extraction } = entry;
+    const atom = extractionToMemoryAtom(extraction, window, job.project ?? options.project);
+    const reconcile = atom ? reconcileAndApplyMemoryAtom(options.store, atom) : { action: "NONE", reason: "extractor_returned_none" };
+    queue.markDone(job, { extraction, atom, reconcile, thread_linker: threadLink ? { degraded: threadLink.degraded, error: threadLink.error } : undefined });
+    inductionProcessed++;
   }
 
   const throttle = new ActivationThrottle(options.activationThrottlePath ?? "data/activation_throttle.jsonl");

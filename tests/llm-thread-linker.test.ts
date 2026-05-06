@@ -39,6 +39,19 @@ describe("linkThreadsWithLlm", () => {
     expect(result.error).toBeTruthy();
   });
 
+  it("兼容 reasoning 模型关闭 thinking 后的别名字段 messages / theme", async () => {
+    const result = await linkThreadsWithLlm([msg("m1", "一"), msg("m2", "二"), msg("m3", "三")], {
+      config: { provider: "openai_compatible", baseUrl: "https://example.com/v1", apiKey: "k", model: "m" },
+      fetchImpl: mockFetch({ threads: [
+        { thread_id: "t1", theme: "话题 A", messages: ["m1", "m3"] },
+        { thread_id: "t2", theme: "话题 B", messages: ["m2"] },
+      ] }),
+    });
+    expect(result.degraded).toBe(false);
+    expect(result.threads.map((t) => t.message_ids)).toEqual([["m1", "m3"], ["m2"]]);
+    expect(result.threads[0].topic_hint).toBe("话题 A");
+  });
+
   it("timeout 超时时降级且保留 abort 错误", async () => {
     const slowFetch = (async (_url: unknown, init?: RequestInit) => {
       return await new Promise<Response>((_resolve, reject) => {
