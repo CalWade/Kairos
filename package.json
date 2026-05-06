@@ -24,7 +24,8 @@
     "setup:lark-runtime:check": "tsx src/cli.ts lark-cli runtime-setup --test-read",
     "demo:reset-state": "bash scripts/reset-demo-state.sh",
     "demo:inject": "node scripts/demo-inject.mjs",
-    "demo:inject:list": "node scripts/demo-inject.mjs --list"
+    "demo:inject:list": "node scripts/demo-inject.mjs --list",
+    "demo:anti-interference": "tsx scripts/demo-anti-interference.ts"
   },
   "keywords": [
     "memory",
