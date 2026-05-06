@@ -33,6 +33,7 @@ npm run setup:lark-runtime -- \
   --test-read \
   --test-webhook
 
+# setup 会写入 .env；后续 runtime 自动读取，不需要手动 export。
 npm run dashboard
 npm run lark-runtime
 ```
@@ -43,3 +44,4 @@ npm run lark-runtime
 - 授权命令需要保持运行，直到浏览器授权完成并返回成功。
 - 不要反复运行 `lark-cli config init --new`。
 - 目标群 `chat_id` 和 webhook 必须对应同一个飞书群。
+- `setup:lark-runtime` 写入 `.env` 后，`npm run lark-runtime` / `npm run lark-runtime:once` 会自动读取配置。

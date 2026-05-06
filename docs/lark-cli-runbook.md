@@ -77,6 +77,8 @@ npm run setup:lark-runtime -- \
 
 该命令会检查权限、测试读取消息、测试发卡，并写入 `.env`。
 
+写入后，runtime 会自动读取 `.env`；不需要在每个终端里手动 `export KAIROS_CHAT_ID`。
+
 ## 6. 启动
 
 ```bash
@@ -117,7 +119,13 @@ grep KAIROS_FEISHU_WEBHOOK_URL .env
 
 ### Dashboard 无数据
 
-运行：
+先确认 `.env` 已写入目标群配置：
+
+```bash
+grep -E 'KAIROS_CHAT_ID|KAIROS_LARK_PROFILE|KAIROS_FEISHU_WEBHOOK_URL' .env
+```
+
+然后运行：
 
 ```bash
 npm run lark-runtime:once

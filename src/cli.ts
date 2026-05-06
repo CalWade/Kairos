@@ -136,6 +136,10 @@ function quoteEnvValue(value: string): string {
   return JSON.stringify(value);
 }
 
+function nonEmpty(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
 function conversationThreadsFromLlm(messages: ReturnType<typeof toNormalizedMessages>, llmThreads: Array<{ id: string; message_ids: string[]; topic_hint?: string; confidence: number }>): ConversationThread[] {
   const byId = new Map(messages.map((m) => [m.id, m]));
   return llmThreads.map((thread) => {
@@ -282,9 +286,9 @@ larkCli
   .option("--test-webhook", "发送一条测试卡片到 webhook 绑定群")
   .description("lark-runtime 接入向导：检查 lark-cli/profile/chat_id/webhook，并可写入 .env")
   .action(async (opts) => {
-    const profile = opts.profile ?? loadEnvValue("KAIROS_LARK_PROFILE") ?? "kairos-alt";
-    const chatId = opts.chatId ?? loadEnvValue("KAIROS_CHAT_ID");
-    const webhook = opts.feishuWebhook ?? loadEnvValue("KAIROS_FEISHU_WEBHOOK_URL");
+    const profile = nonEmpty(opts.profile) ?? loadEnvValue("KAIROS_LARK_PROFILE") ?? "kairos-alt";
+    const chatId = nonEmpty(opts.chatId) ?? loadEnvValue("KAIROS_CHAT_ID");
+    const webhook = nonEmpty(opts.feishuWebhook) ?? loadEnvValue("KAIROS_FEISHU_WEBHOOK_URL");
     const status = checkLarkCliStatus({ checkAuth: true, profile });
     const preflight = preflightLarkCliPurpose("chat_messages", { profile });
     const checks = [] as Array<{ name: string; ok: boolean; detail?: unknown; next?: string }>;
@@ -363,14 +367,14 @@ larkCli
   .description("lark-cli 产品运行时：轮询群消息、归纳记忆、激活卡片、写 Dashboard 状态")
   .action(async (opts) => {
     await runLarkRuntime({
-      chatId: opts.chatId ?? loadEnvValue("KAIROS_CHAT_ID"),
-      profile: opts.profile ?? loadEnvValue("KAIROS_LARK_PROFILE"),
+      chatId: nonEmpty(opts.chatId) ?? loadEnvValue("KAIROS_CHAT_ID") ?? "",
+      profile: nonEmpty(opts.profile) ?? loadEnvValue("KAIROS_LARK_PROFILE") ?? "kairos-alt",
       project: opts.project,
       pageSize: Number(opts.pageSize),
       intervalMs: Number(opts.intervalMs),
       once: !!opts.once,
       sendFeishuWebhook: !!opts.sendFeishuWebhook,
-      feishuWebhookUrl: opts.feishuWebhook ?? loadEnvValue("KAIROS_FEISHU_WEBHOOK_URL"),
+      feishuWebhookUrl: nonEmpty(opts.feishuWebhook) ?? loadEnvValue("KAIROS_FEISHU_WEBHOOK_URL"),
       statePath: opts.state,
       runtimeLogPath: opts.runtimeLog,
       inductionQueuePath: opts.inductionQueue,

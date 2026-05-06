@@ -55,6 +55,8 @@ npm run setup:lark-runtime -- \
 
 该命令会检查 lark-cli、profile、chat_id、webhook，并写入 `.env`。
 
+写入后，`npm run lark-runtime` 和 `npm run lark-runtime:once` 会自动读取 `.env`，不需要手动 `export KAIROS_CHAT_ID`。
+
 ## 6. 启动
 
 终端 1：
@@ -81,6 +83,12 @@ http://127.0.0.1:8787
 
 ```bash
 npm run lark-runtime:once
+```
+
+如果需要临时覆盖配置，可以直接使用 CLI 参数：
+
+```bash
+npm run dev -- lark-cli runtime --chat-id oc_xxx --profile kairos-alt --once
 ```
 
 运行核心评测：

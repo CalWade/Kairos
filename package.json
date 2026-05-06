@@ -18,8 +18,8 @@
     "eval:core": "tsx src/cli.ts eval --core",
     "dashboard": "tsx src/cli.ts eval --core >/dev/null && tsx src/cli.ts dashboard --serve --port 8787",
     "dashboard:static": "tsx src/cli.ts eval --core >/dev/null && tsx src/cli.ts dashboard --output runs/kairos-engine-dashboard.html",
-    "lark-runtime": "tsx src/cli.ts lark-cli runtime --chat-id \"$KAIROS_CHAT_ID\" --profile \"${KAIROS_LARK_PROFILE:-kairos-alt}\" --llm-thread-link --fallback --send-feishu-webhook",
-    "lark-runtime:once": "tsx src/cli.ts lark-cli runtime --chat-id \"$KAIROS_CHAT_ID\" --profile \"${KAIROS_LARK_PROFILE:-kairos-alt}\" --llm-thread-link --fallback --once",
+    "lark-runtime": "tsx src/cli.ts lark-cli runtime --llm-thread-link --fallback --send-feishu-webhook",
+    "lark-runtime:once": "tsx src/cli.ts lark-cli runtime --llm-thread-link --fallback --once",
     "setup:lark-runtime": "tsx src/cli.ts lark-cli runtime-setup --write-env",
     "setup:lark-runtime:check": "tsx src/cli.ts lark-cli runtime-setup --test-read"
   },
