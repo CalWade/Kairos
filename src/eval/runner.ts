@@ -115,12 +115,34 @@ export function runAntiInterferenceEval(path = "eval/datasets/anti-interference.
       const atom = extractionToMemoryAtom(extraction, window(memory), "kairos");
       if (atom) store.upsert(atom);
     }
-    const hits = store.search(item.query, { project: "kairos", limit: 1 });
-    const text = hits.map((hit) => hit.content).join("\n");
+    // 取 Top-K（默认 5），便于评估排名。旧 case 里 expected_contains 基于 Top1，
+    // 仍向后兼容：第一条 hit 为主要判定对象。
+    const topK = Math.max(5, item.expected_hit_rank ?? 1);
+    const hits = store.search(item.query, { project: "kairos", limit: topK });
+    const top1 = hits[0];
+    const text = top1 ? top1.content : "";
     const containsOk = (item.expected_contains ?? []).every((needle: string) => text.includes(needle));
     const notContainsOk = (item.expected_not_contains ?? []).every((needle: string) => !text.includes(needle));
-    const passed = containsOk && notContainsOk;
-    return { id: item.id, passed, actual: hits, reason: passed ? undefined : "抗干扰召回未命中期望或命中了不相关内容" };
+    // 硬核模式：若 case 指定 expected_hit_rank，验证目标出现在前 N 位，
+    // 同时返回命中位置 hit_rank 方便可视化。
+    let hitRank: number | undefined;
+    if (item.expected_hit_rank !== undefined) {
+      const idx = hits.findIndex((hit) => (item.expected_contains ?? []).every((needle: string) => hit.content.includes(needle)));
+      hitRank = idx >= 0 ? idx + 1 : undefined;
+    }
+    const rankOk = item.expected_hit_rank === undefined || (hitRank !== undefined && hitRank <= item.expected_hit_rank);
+    const passed = containsOk && notContainsOk && rankOk;
+    return {
+      id: item.id,
+      passed,
+      actual: {
+        top1,
+        hit_rank: hitRank,
+        candidates_in_store: item.memories.length,
+        top_k_returned: hits.length,
+      },
+      reason: passed ? undefined : `抗干扰召回未命中期望或排名不足：hit_rank=${hitRank}, expected≤${item.expected_hit_rank ?? 1}`,
+    };
   }));
   return summarize("anti-interference", results);
 }
