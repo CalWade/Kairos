@@ -179,7 +179,8 @@ npm run dev -- eval --suite llm-decision-extraction
 
 | 文档 | 说明 |
 |---|---|
+| [`docs/whitepaper.md`](./docs/whitepaper.md) | Memory 定义与架构白皮书（复赛交付物）|
+| [`docs/benchmark-report.md`](./docs/benchmark-report.md) | 自证评测报告（复赛交付物）|
+| [`docs/demo-script.md`](./docs/demo-script.md) | 复赛演示脚本 |
 | [`QUICKSTART.md`](./QUICKSTART.md) | OpenClaw Agent 快速接入提示词 |
 | [`docs/lark-cli-runbook.md`](./docs/lark-cli-runbook.md) | lark-cli 授权、群接入和排障 |
-| [`docs/demo-script.md`](./docs/demo-script.md) | 复赛演示脚本 |
-| [`docs/benchmark-report.md`](./docs/benchmark-report.md) | 自证评测报告 |

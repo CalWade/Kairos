@@ -53,6 +53,7 @@
       "OPENCLAW.md",
       "INSTALL.md",
       "QUICKSTART.md",
+      "docs/whitepaper.md",
       "docs/lark-cli-runbook.md",
       "docs/demo-script.md",
       "docs/benchmark-report.md"
@@ -67,6 +68,7 @@
     "INSTALL.md",
     "OPENCLAW.md",
     "openclaw.setup.json",
+    "docs/whitepaper.md",
     "docs/lark-cli-runbook.md",
     "docs/demo-script.md",
     "docs/benchmark-report.md",
