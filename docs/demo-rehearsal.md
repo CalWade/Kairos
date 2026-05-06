@@ -116,7 +116,7 @@ npm run demo:inject -- --script storage-decision
 
 ### 3.4 可证明
 
-> 不是让评委相信"我们系统很强"。Kairos 自带 8 套评测 / 103 个测试用例，全绿。抗干扰 F1=1.0、矛盾更新全 4 种状态通过、操作步数节省 71.4%。这些数字都在 `docs/benchmark-report.md` 里，且可以一键重跑。
+> 不是让评委相信"我们系统很强"。Kairos 自带 8 套评测 / 103 个单测 / 36 个 benchmark case，全绿。在我们自建的 101 条记忆（100 条噪声 + 1 条目标）里，查询"为什么不用 PostgreSQL？" 目标排名第一。矛盾更新 4 种状态全通过，操作步数从 7 步降到 2 步。这些都是自建小样本 benchmark 的数字，具体口径和边界披露在 `docs/benchmark-report.md` §7，可以一键重跑。
 
 ## 镜头 4：技术深度闪一下（1 分钟）
 
@@ -158,5 +158,7 @@ npm run demo:inject -- --script storage-decision
 | 这个 LLM 换成开源模型行吗？| 是 OpenAI-compatible，任何兼容 endpoint 都行，已测 DeepSeek / 火山方舟 |
 | 真实用户和 bot 混着发怎么办？| 真实用户走 lark-cli 返回的 `sender.name`，bot 走【角色】前缀解析，不冲突 |
 | 记忆多了怎么处理？| `review_at` 字段 + 状态机 `superseded / expired`；已实现下一步加 Ebbinghaus 复习曲线 |
-| 为什么不用向量检索？| 结构化 alias + negative_keys 可解释、可回归测试、无外部服务依赖、零 token 成本；生产环境可以再加 embedding 作为二级召回 |
+| 为什么不用向量检索？| 当前优先结构化召回是因为决策类记忆要可解释、可回归测试、可审计；后续会叠加 embedding 作为二级召回层兜住 query 表述差异场景 |
 | 和飞书官方智能问答有什么差异？| Kairos 是"主动激活 + 结构化决策状态管理"，不是通用问答 |
+| 评测数据多少？谁标的？| 自建小样本 benchmark ~50 条，作者本人标注；不是生产级数据。硬核抗干扰的 100 条噪声也是人工构造仿真。边界披露写在 benchmark-report §7，提交时已经明确 |
+| OpenClaw 在这里扮演什么角色？| Agent 宿主 + 部署控制面——负责拉仓库、构建、配 .env、运行 Dashboard 和 runtime。飞书消息接入用的是官方 lark-cli，不是 OpenClaw hook |

@@ -2,7 +2,11 @@
 
 > 对齐赛题三类强制测试：抗干扰、矛盾更新、效能指标；另补充真实飞书群端到端实测和 LLM 质量对比。
 
+> ⚠️ **样本性质声明**：本报告所有数字均基于 Kairos **自建小样本 benchmark 与 silver set**，目的是证明主要能力在代表性 case 上成立，**不等同于生产大规模标注数据集**。样本规模、标注方式、边界披露见 §7。真实飞书群端到端数据（§4）为 2026-05-07 实测一次的结果，非持续统计。
+
 ## 0. 一眼总结
+
+以下指标均基于自建小样本 benchmark；详细口径和局限见各小节与 §7。
 
 | 指标 | 数字 |
 |---|---|
@@ -255,11 +259,29 @@ Memory ID: mem_27bdeb757fdf5310
 
 ## 7. 结果解释边界
 
-- 本地 benchmark 是可复现自测，不等同于生产大规模线上评测
-- `thread-linking` 中的 silver set 不等同于人工 gold label
+**样本规模与来源**
+
+- 所有 benchmark case 为 Kairos 作者自建，约 36 条核心 + 4 条 LLM 抽取 + 3 条 thread silver，总规模 ~50 条，**不是大规模人工标注数据集**
+- `anti-interference hardcore` 的 100 条噪声为仿真群聊风格人工构造，**不等于真实线上群的噪声分布**
+- `thread-linking` silver set 由启发式 + LLM 联合生成，**不等同于人工 gold label**
+- `llm-decision-extraction` 4 条用例覆盖 5 类 kind 边界，**规模小**，持续迭代中会扩到 50+
+
+**指标口径**
+
+- `F1 = 1.0` / `rank = 1` 类数字均基于上述自建小样本，不做生产级承诺
+- 效能指标里的"耗时 39s / 3s"是动作分解**中位数估算**，不是严格用户研究数据；详细逐步推导见 [`docs/efficiency-measurement.md`](./efficiency-measurement.md)
+- AI agent token 节省"~1500 → ~200"是基于典型 agent 工作流（search + rerank + 生成）的**粗估**，具体数字随 prompt 设计变化
+
+**真实飞书端到端数据**
+
+- §4 的 17 秒、`fetched=6 new=6 sent=1` 是 2026-05-07 凌晨一次实测的结果，**非持续多轮统计**
+- 飞书群 API 读取和真实 webhook 推卡无仿真成分；lark-cli 返回结构和 sender 字段见 [`docs/lark-cli-runbook.md`](./lark-cli-runbook.md)
+
+**系统行为**
+
 - LLM 路径全部保留 timeout / fallback / degraded 记录，可审计
-- 飞书群端到端以真实 `lark-cli +chat-messages-list` 读取和真实 webhook 推卡为准
-- 3 个 webhook 机器人共享同一 `app_id`，故用【角色】前缀承载 sender 信号；真实用户不受影响，走飞书 API 的 `sender.name`
+- 3 个 webhook 机器人共享同一 `app_id`，故用【角色】前缀承载 sender 信号；真实用户不受此约束，走飞书 API 的 `sender.name`
+- 当前结构化召回优先；后续可叠加 embedding 作为二级候选层，见白皮书 §4.3
 
 ## 8. 重现实验
 

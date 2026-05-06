@@ -82,18 +82,23 @@ npm run demo:inject -- --script storage-decision   # 终端 3 注入 6 条 demo 
 
 #### 亮点 4：自证评测体系
 
-**不让评委相信口头承诺**：
+**不让评委相信口头承诺，所有数字可一键重跑**：
 
-- 103 个 Vitest 测试用例全绿
-- 8 套 benchmark suite：decision-extraction / conflict-update / recall / anti-interference / remind / feishu-workflow / thread-linking / llm-decision-extraction
-- 赛题 3 类强制测试（抗干扰 / 矛盾更新 / 效能指标）全通过
-- 所有数字可一键重跑：`npm run eval:core && npm run dev -- eval --suite thread-linking`
+- 103 个 Vitest 单元测试全绿
+- 8 套 benchmark suite：decision-extraction / conflict-update / recall / anti-interference / remind / feishu-workflow / thread-linking / llm-decision-extraction，共 36 个 benchmark case 全通过
+- 对齐赛题 3 类强制测试：抗干扰（含 100+ 噪声硬核场景）/ 矛盾更新 / 效能指标
+- 一键重跑：`npm run eval:core && npm run dev -- eval --suite thread-linking`
 
-#### 亮点 5：OpenClaw 原生接入
+> ⚠️ 所有数字基于**自建小样本 benchmark 和 silver set**，目的是证明主要能力在代表性 case 上成立，**不等同于生产大规模标注数据集**；详细规模、口径、边界披露见 `docs/benchmark-report.md` §7。
 
-- `openclaw.setup.json` 描述完整安装流程
-- `hooks/kairos-feishu-ingress/` 提供 OpenClaw hook pack
-- Agent 宿主 `git clone + npm install + npm run build` 即可运行
+#### 亮点 5：OpenClaw 作为 Agent 宿主与部署控制面
+
+在赛题语境里，Kairos 对 OpenClaw 的定位是**运维 / 部署的控制面**，不是消息接入层：
+
+- `openclaw.setup.json` 描述 Agent 安装与接入指引，让 OpenClaw agent 能一条链接接手部署
+- OpenClaw 负责**拉取仓库、构建、配置 `.env`、运行 Dashboard / runtime / benchmark**
+- 飞书消息接入主路径用**官方 lark-cli Runtime**（`src/larkRuntime/worker.ts`），稳定且权限清晰
+- `hooks/` 目录保留为 OpenClaw 事件接入的**可选扩展**，不是当前主 Demo 路径
 - 三段文档分工清晰：`OPENCLAW.md`（Agent 宿主视角）/ `QUICKSTART.md`（快速接入）/ `INSTALL.md`（详细部署）
 
 #### 亮点 6：完整可观测性
@@ -143,16 +148,18 @@ npm run demo:inject -- --script storage-decision   # 终端 3 注入 6 条 demo 
 
 | 场景 | 引入前 | 引入后 |
 |---|---|---|
-| 历史决策复议 | 人工翻群聊、搜索、复制结论（~7 步、~42 字输入） | Kairos 自动推卡片（~2 步、0 字）|
-| 会话解缠质量 | 时间窗启发式 F1=0.524 | LLM F1=1.000 |
+| 历史决策复议 | 人工翻群聊、搜索、复制结论（~7 步、~10 字输入） | Kairos 自动推卡片（~2 步、0 字）|
+| 会话解缠质量 | 时间窗启发式（小样本 F1=0.524）| LLM thread linking（同小样本 F1=1.000）|
 | 决策抽取深度 | 单句摘要 | 10+ 字段结构化（含被否方案、反对意见、反向 key）|
 | 冲突感知 | 人工发现 | 自动 DIRECT_CONFLICT 标记 |
+
+> 会话解缠 F1 基于自建 3 条交错对话 silver set，不等同人工 gold label；具体样本见 `docs/benchmark-report.md` §5.1。
 
 ### 5）其他信息补充
 
 - **开源**：MIT License，代码 https://github.com/CalWade/Kairos
-- **真实飞书链路已跑通**：2026-05-07 凌晨实测 6 条消息 → 1 张卡片，17 秒端到端
-- **完全兼容 OpenClaw 生态**：见 `OPENCLAW.md` 与 `openclaw.setup.json`
+- **真实飞书链路已跑通**：2026-05-07 凌晨实测一次 6 条消息 → 1 张卡片，17 秒端到端（非多轮统计）
+- **OpenClaw 承担部署控制面**：拉代码、构建、配置、运行 Dashboard / runtime；飞书消息接入走官方 lark-cli
 
 ---
 
@@ -184,16 +191,20 @@ npm run demo:inject -- --script storage-decision   # 终端 3 注入 6 条 demo 
 
 ## 关键数字一览
 
-| 维度 | 数字 |
-|---|---:|
-| 本地测试通过率 | 103/103 |
-| 真实群单轮延迟 | 17 秒 |
-| 抗干扰 F1 | 1.0 |
-| Thread linking F1（LLM vs heuristic）| 1.000 vs 0.524 |
-| 操作步数节省 | -71.4% |
-| 额外输入字符节省 | -100% |
-| 代码规模 | 7000 行 src + 1900 行 test |
-| 性能提升（优化前 vs 后）| 93s → 17s（5.5x）|
+> 以下指标均基于自建小样本 benchmark；详细口径和边界披露见 `docs/benchmark-report.md` §7。
+
+| 维度 | 数字 | 来源 / 备注 |
+|---|---:|---|
+| 本地单元测试通过率 | 103/103 | Vitest |
+| Benchmark case 通过率 | 36/36 | 8 套自建 suite |
+| 硬核抗干扰排名 | rank=1 in 101 | 100 条人工构造噪声 + 1 条目标 |
+| 真实群单轮延迟 | 17 秒 | 2026-05-07 实测一次 |
+| 耗时改善（估算）| 39s → 3s | 动作分解中位数 |
+| 操作步数节省 | 7 步 → 2 步 | 同上 |
+| 用户输入字符节省 | 10 → 0 | 同上 |
+| AI agent token 估算节省 | ~1500 → ~200 | 粗估 |
+| 代码规模 | ~7000 行 src + ~1900 行 test | |
+| 性能演进 | 93s → 47s → 17s | 换 endpoint + prompt 瘦身 + 并行 |
 
 ## 文档列表
 
