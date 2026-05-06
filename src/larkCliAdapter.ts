@@ -185,18 +185,21 @@ export function toNormalizedMessages(value: unknown, chatIdHint?: string): Norma
   const rows = collectRecords(value);
   const result: NormalizedMessage[] = [];
   for (const row of rows) {
-    const text = pickText(row);
-    if (!text) continue;
+    const rawText = pickText(row);
+    if (!rawText) continue;
     const id = pickId(row) ?? `lark_${row._index ?? result.length}`;
-    const sender = pickSender(row);
     const timestamp = pickTimestamp(row);
     const chat_id = typeof row.chat_id === "string" ? row.chat_id : chatIdHint;
     const thread_id = typeof row.thread_id === "string" ? row.thread_id : undefined;
     const reply_to = typeof row.reply_to === "string" ? row.reply_to : undefined;
+    // 优先使用文本前缀里的角色名【xxx】；fallback 到 API 返回的 sender。
+    // 用于多 webhook 机器人共用同一 app_id 时的角色区分。
+    const { role, body } = stripRolePrefix(rawText);
+    const sender = role ?? pickSender(row);
     result.push({
       id,
       sender,
-      text,
+      text: body,
       timestamp,
       chat_id,
       thread_id,
@@ -210,6 +213,19 @@ export function toNormalizedMessages(value: unknown, chatIdHint?: string): Norma
     });
   }
   return dedupeById(result);
+}
+
+/**
+ * 解析消息正文里的 【角色】 前缀，用于多 webhook 机器人共用同一 app_id
+ * 的场景（飞书自定义机器人 webhook 全部以同一 app_id 送达 lark-cli）。
+ * 支持全角/半角括号；role 限制 1-12 字符，避免把普通"【注意】"之类正文前缀误吃。
+ */
+export function stripRolePrefix(text: string): { role?: string; body: string } {
+  const match = text.match(/^\s*(?:【([^【】]{1,12})】|\[([^\[\]]{1,12})\])\s*/u);
+  if (!match) return { body: text };
+  const role = (match[1] ?? match[2] ?? "").trim();
+  if (!role) return { body: text };
+  return { role, body: text.slice(match[0].length) };
 }
 
 function pickSender(record: Record<string, unknown>): string {
@@ -324,6 +340,9 @@ function isLarkCliNoiseRecord(record: Record<string, unknown>): boolean {
   if (record.msg_type === "interactive" || record.msg_type === "post") return true;
   const raw = String(record.content ?? record.text ?? "").trim();
   if (raw.startsWith("<card>") || raw.includes("open.feishu.cn/page/cli") || raw.includes("accounts.feishu.cn/oauth")) return true;
+  // 撤回 / 损坏消息：飞书撤回后 lark-cli 仍返回 message_id 占位，content 为
+  // "[Invalid text JSON]"；当普通文本吃进线程会污染 thread linking。
+  if (raw === "[Invalid text JSON]" || raw === "[deleted]") return true;
   // sender_type=="app" 本身不再作为过滤理由：自定义机器人 webhook、合法 bot 也是 app；
   // 只有当 app 发的内容同时命中 lark-cli 登录卡片特征时，才作为噪声丢弃（前面 URL 黑名单已覆盖）。
   return false;

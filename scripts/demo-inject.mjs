@@ -69,6 +69,18 @@ function redactWebhook(url) {
   return `${url.slice(0, m.index + 6)}${id.slice(0, 4)}…${id.slice(-4)}`;
 }
 
+/**
+ * 把 role 签到消息前面：【产品】复赛 demo...
+ * 多 webhook 共享同一个 app_id，lark-cli 返回的 sender 全一致；
+ * 签名让下游 adapter 能识别"谁发的"，LLM thread linking / decision extraction
+ * 也能从多 sender 信号里获益。
+ */
+function formatOutgoingText(role, text, { enabled = true } = {}) {
+  if (!enabled) return text;
+  const clean = String(text ?? "").replace(/^\s*【[^】]+】\s*/u, ""); // 剧本若已自带前缀则去重
+  return `【${role}】${clean}`;
+}
+
 async function sendTextMessage(webhookUrl, text) {
   const response = await fetch(webhookUrl, {
     method: "POST",
@@ -101,6 +113,7 @@ function printHelp() {
   --webhooks <path>     webhook 映射 JSON；默认 data/demo-webhooks.json
   --scripts-dir <path>  剧本目录；默认 examples/demo-scripts
   --min-pause-ms <ms>   最短等待时间下限，避免 pause_ms=0 刷屏；默认 400
+  --no-role-prefix      不在消息前加 【role】 前缀（默认会加）
   --start <index>       从第 N 条开始（1-based）
   --end <index>         到第 N 条结束（含）
   --help                显示本说明
@@ -116,6 +129,7 @@ async function main() {
       webhooks: { type: "string", default: DEFAULT_WEBHOOKS_PATH },
       "scripts-dir": { type: "string", default: DEFAULT_SCRIPTS_DIR },
       "min-pause-ms": { type: "string", default: "400" },
+      "no-role-prefix": { type: "boolean", default: false },
       start: { type: "string" },
       end: { type: "string" },
       help: { type: "boolean", default: false },
@@ -150,15 +164,23 @@ async function main() {
     throw new Error(`剧本用到但未配置 webhook 的角色: ${missingRoles.join(", ")}`);
   }
 
+  const addPrefix = !values["no-role-prefix"];
+
   if (values["dry-run"]) {
     console.log(JSON.stringify({
       ok: true,
       mode: "dry-run",
       script: scriptPath,
       webhooks_path: values.webhooks,
+      role_prefix: addPrefix,
       roles: Object.fromEntries(Object.entries(webhooks).map(([k, v]) => [k, redactWebhook(v)])),
       total: slice.length,
-      preview: slice.map((m, i) => ({ index: start + i, role: m.role, text: m.text, pause_ms: m.pause_ms })),
+      preview: slice.map((m, i) => ({
+        index: start + i,
+        role: m.role,
+        outgoing_text: formatOutgoingText(m.role, m.text, { enabled: addPrefix }),
+        pause_ms: m.pause_ms,
+      })),
     }, null, 2));
     return;
   }
@@ -168,9 +190,10 @@ async function main() {
     const m = slice[i];
     const idx = start + i;
     const webhook = webhooks[m.role];
-    process.stderr.write(`[${idx}/${end}] ${m.role} → ${m.text.slice(0, 40)}${m.text.length > 40 ? "…" : ""}\n`);
+    const outgoing = formatOutgoingText(m.role, m.text, { enabled: addPrefix });
+    process.stderr.write(`[${idx}/${end}] ${m.role} → ${outgoing.slice(0, 44)}${outgoing.length > 44 ? "…" : ""}\n`);
     try {
-      const result = await sendTextMessage(webhook, m.text);
+      const result = await sendTextMessage(webhook, outgoing);
       results.push({ index: idx, role: m.role, ok: result.ok, status: result.status, code: result.code, msg: result.msg });
       if (!result.ok) {
         process.stderr.write(`  ! webhook 返回非成功：${JSON.stringify({ status: result.status, code: result.code, msg: result.msg })}\n`);

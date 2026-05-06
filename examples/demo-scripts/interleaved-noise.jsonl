@@ -1,6 +1,6 @@
-{"role": "product", "text": "hooks 路径那个报错的问题有人看吗？重启了也不行。", "pause_ms": 1800}
-{"role": "engA", "text": "我这边在做 API Key 轮换，稍等。", "pause_ms": 1500}
-{"role": "engB", "text": "路径里的 ~ 没展开，建议改成绝对路径。", "pause_ms": 1800}
-{"role": "engA", "text": "轮换已经完成，新的 key 放在 1Password 里了。", "pause_ms": 1500}
-{"role": "product", "text": "好的。hooks 问题就按 engB 说的改？", "pause_ms": 2000}
-{"role": "engB", "text": "嗯，已经提了 PR。", "pause_ms": 1200}
+{"role": "产品", "text": "hooks 路径那个报错的问题有人看吗？重启了也不行。", "pause_ms": 1800}
+{"role": "工程A", "text": "我这边在做 API Key 轮换，稍等。", "pause_ms": 1500}
+{"role": "工程B", "text": "路径里的 ~ 没展开，建议改成绝对路径。", "pause_ms": 1800}
+{"role": "工程A", "text": "轮换已经完成，新的 key 放在 1Password 里了。", "pause_ms": 1500}
+{"role": "产品", "text": "好的。hooks 问题就按工程B 说的改？", "pause_ms": 2000}
+{"role": "工程B", "text": "嗯，已经提了 PR。", "pause_ms": 1200}

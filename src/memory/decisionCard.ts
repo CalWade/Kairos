@@ -104,7 +104,6 @@ export function renderDecisionCardMarkdown(card: DecisionCard): string {
   lines.push("");
   lines.push("### 证据");
   lines.push(`- 来源：${card.evidence.channel}/${card.evidence.source_type}`);
-  if (card.evidence.chunk_ids?.length) lines.push(`- 片段：${card.evidence.chunk_ids.join(", ")}`);
   lines.push(`- 摘录：${card.evidence.excerpt}`);
   return lines.join("\n");
 }
@@ -132,7 +131,7 @@ export function renderDecisionCardFeishuPayload(card: DecisionCard): FeishuCardP
   if (card.opposition.length) {
     elements.push(markdown(`**反对 / 顾虑**\n${card.opposition.map((item) => `- ${item.speaker ? `${item.speaker}：` : ""}${item.content}`).join("\n")}`));
   }
-  elements.push(markdown(`**证据**\n来源：${card.evidence.channel}/${card.evidence.source_type}${card.evidence.chunk_ids?.length ? `\n片段：${card.evidence.chunk_ids.join(", ")}` : ""}\n摘录：${truncate(card.evidence.excerpt, 600)}`));
+  elements.push(markdown(`**证据**\n来源：${card.evidence.channel}/${card.evidence.source_type}\n摘录：${truncate(card.evidence.excerpt, 600)}`));
   elements.push({
     tag: "action",
     actions: [

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLarkCliPlan, checkLarkCliStatus, extractChatInfoFromLarkCliJson, extractTextsFromLarkCliJson, preflightLarkCliPurpose, toNormalizedMessages } from "../src/larkCliAdapter.js";
+import { buildLarkCliPlan, checkLarkCliStatus, extractChatInfoFromLarkCliJson, extractTextsFromLarkCliJson, preflightLarkCliPurpose, stripRolePrefix, toNormalizedMessages } from "../src/larkCliAdapter.js";
 
 describe("lark-cli adapter", () => {
   it("status check never throws", () => {
@@ -40,6 +40,15 @@ describe("lark-cli adapter", () => {
       { message_id: "cli_oauth_1", msg_type: "text", sender: { sender_type: "app" }, content: "请访问 https://accounts.feishu.cn/oauth/authorize?..." },
     ] } });
     expect(texts.map((t) => t.id)).toEqual(["bot_1"]);
+  });
+
+  it("丢弃撤回消息占位 [Invalid text JSON]", () => {
+    const texts = extractTextsFromLarkCliJson({ data: { messages: [
+      { message_id: "live_1", msg_type: "text", content: "正常内容" },
+      { message_id: "revoked_1", msg_type: "text", content: "[Invalid text JSON]" },
+      { message_id: "revoked_2", msg_type: "text", content: "[deleted]" },
+    ] } });
+    expect(texts.map((t) => t.id)).toEqual(["live_1"]);
   });
 
   it("extractTextsFromLarkCliJson 从常见 lark-cli 输出中提取文本", () => {
@@ -99,5 +108,30 @@ describe("lark-cli adapter", () => {
     expect(messages[0].reply_to).toBe("om_parent");
     expect(messages[1].sender).toBe("Bob");
     expect(messages[1].thread_id).toBeUndefined();
+  });
+
+  it("stripRolePrefix 识别 【xxx】 / [xxx] 前缀", () => {
+    expect(stripRolePrefix("【产品】复赛 demo 要轻")).toEqual({ role: "产品", body: "复赛 demo 要轻" });
+    expect(stripRolePrefix("  【工程A】 PostgreSQL 太重")).toEqual({ role: "工程A", body: "PostgreSQL 太重" });
+    expect(stripRolePrefix("[engB] SQLite 更轻")).toEqual({ role: "engB", body: "SQLite 更轻" });
+    expect(stripRolePrefix("没有前缀的普通消息")).toEqual({ body: "没有前缀的普通消息" });
+    expect(stripRolePrefix("")).toEqual({ body: "" });
+    // 超长 role（>12 chars）不吃，避免把真实用户正文误识别
+    expect(stripRolePrefix("【这段内容超过十二个字符的标签】正文")).toEqual({ body: "【这段内容超过十二个字符的标签】正文" });
+    // 嵌套括号不吃
+    expect(stripRolePrefix("【a【b】c】正文")).toEqual({ body: "【a【b】c】正文" });
+  });
+
+  it("toNormalizedMessages 优先使用 【role】 前缀覆盖 sender 并去前缀", () => {
+    const messages = toNormalizedMessages({ data: { messages: [
+      { message_id: "m_bot", sender: { sender_type: "app", id: "cli_xxx" }, content: "【产品】复赛 demo 要轻", create_time: 1715000000000 },
+      { message_id: "m_user", sender: { sender_type: "user", id: "ou_a", name: "韦贺文" }, content: "不行，用 sqllite 就行", create_time: 1715000010000 },
+      { message_id: "m_bot2", sender: { sender_type: "app", id: "cli_xxx" }, content: "没加前缀的 bot 消息", create_time: 1715000020000 },
+    ] } }, "oc_x");
+    expect(messages.map((m) => ({ sender: m.sender, text: m.text }))).toEqual([
+      { sender: "产品", text: "复赛 demo 要轻" },
+      { sender: "韦贺文", text: "不行，用 sqllite 就行" },
+      { sender: "cli_xxx", text: "没加前缀的 bot 消息" },
+    ]);
   });
 });

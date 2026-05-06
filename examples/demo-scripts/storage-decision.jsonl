@@ -1,6 +1,6 @@
-{"role": "product", "text": "复赛 demo 的环境要尽量轻，评委最好能一键跑起来。", "pause_ms": 1500}
-{"role": "engA", "text": "PostgreSQL 会不会太重？本地部署和初始化都麻烦。", "pause_ms": 2200}
-{"role": "engB", "text": "SQLite + JSONL 更轻，也适合 OpenClaw 插件分发。", "pause_ms": 2000}
-{"role": "product", "text": "最终决定：复赛阶段先用 SQLite，PostgreSQL 复赛后再评估。", "pause_ms": 3500}
-{"role": "engA", "text": "收到，下午把 Store 层切到 SQLite。", "pause_ms": 2500}
-{"role": "engB", "text": "要不我们还是用 PostgreSQL？", "pause_ms": 500}
+{"role": "产品", "text": "复赛 demo 的环境要尽量轻，评委最好能一键跑起来。", "pause_ms": 1500}
+{"role": "工程A", "text": "PostgreSQL 会不会太重？本地部署和初始化都麻烦。", "pause_ms": 2200}
+{"role": "工程B", "text": "SQLite + JSONL 更轻，也适合 OpenClaw 插件分发。", "pause_ms": 2000}
+{"role": "产品", "text": "最终决定：复赛阶段先用 SQLite，PostgreSQL 复赛后再评估。", "pause_ms": 3500}
+{"role": "工程A", "text": "收到，下午把 Store 层切到 SQLite。", "pause_ms": 2500}
+{"role": "工程B", "text": "要不我们还是用 PostgreSQL？", "pause_ms": 500}
