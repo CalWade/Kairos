@@ -6,6 +6,22 @@
 
 ---
 
+## Executive Summary
+
+**解决什么问题**
+飞书群里的项目决策容易丢失、重复讨论、难以追溯。已经拍板的事隔几天被重新争论；关键理由散落在群聊里，没人找得到；AI agent 接入群聊后每次"从零开始"，无法复用历史上下文。
+
+**我们做了什么**
+用官方 lark-cli 读取真实飞书群消息，经会话解缠和 LLM 慢归纳生成带结构、带状态、带证据链的 MemoryAtom；在后续讨论触及历史决策时，自动把决策卡片推回协作现场。
+
+**为什么有价值**
+减少人工翻聊天记录的操作负担，保留完整决策证据链，避免旧决策被反复推翻或误用。对 AI agent 而言，提供可直接消费的结构化记忆，减少重复调用 API 和 token 消耗。
+
+**验证结果**
+真实飞书群端到端链路已跑通（2026-05-07 实测 17 秒单轮）；本地自建小样本 benchmark 覆盖赛题三类强制测试（抗干扰 / 矛盾更新 / 效能指标），合计 103 个单测 + 36 个 benchmark case 全部通过。
+
+---
+
 ## 1. 挑战一：重新定义"记忆"（Define it）
 
 ### 1.1 问题定义
@@ -116,6 +132,8 @@ type MemoryAtom = {
 };
 ```
 
+**关于 `type` 字段**：§1.2 在抽取阶段区分 4 个判别类（decision / convention / risk / workflow）和 1 个拒绝类（none）；`none` 不产生 MemoryAtom，因此 schema 里没有。另外保留 `knowledge` 作为通用兜底类型，用于手动 `add`、外部 ingest 等未走决策抽取路径的场景，避免未归类内容强行塞进前四类扭曲语义。当前主路径 LLM 抽取不会产生 `knowledge` 记忆。
+
 ### 2.3 决策类记忆的结构化细节
 
 不是简单的一句话摘要，而是完整的"决策证据图"：
@@ -184,25 +202,27 @@ type DecisionExtraction = {
 
 ### 3.2 自证评测（8 套 suite，103 测试全绿）
 
+> 以下指标均基于 Kairos 自建小样本 benchmark 与 silver set，目的是证明主要能力在代表性 case 上成立，**不等同于生产大规模标注数据集上的评测**。样本规模、标注方式、边界条件见 [`docs/benchmark-report.md`](./benchmark-report.md) §7。
+
 | Suite | 用例数 | 覆盖维度 |
 |---|---:|---|
 | decision-extraction | 17 | decision/convention/risk/workflow/none 5 类边界 |
 | conflict-update | 4 | SUPERSEDE / CONFLICT_PENDING 状态机 |
 | recall | 5 | 决策召回、理由召回、alias 召回 |
-| anti-interference | 3 | 多干扰记忆中精准命中目标决策 |
+| anti-interference | 4 | 多干扰记忆中精准命中，含 100+ 噪声硬核场景 |
 | remind | 2 | 风险记忆 review_at 到期提醒 |
 | feishu-workflow | 4 | activation / 噪声忽略 / 斜杠命令跳过 |
-| thread-linking | 3 | 启发式 vs LLM thread linking 对比 F1 |
+| thread-linking | 3 | 启发式 vs LLM thread linking F1 对比 |
 | llm-decision-extraction | 4 | LLM 结构化抽取全 kind 覆盖 |
 
 ### 3.3 关键数字（对齐复赛 3 类测试）
 
 #### 抗干扰测试
 
-向 Store 注入 hooks 错误、API Key 轮换、周报安排等干扰记忆后，查询"为什么不用 PostgreSQL？"
-
-- **F1 = 1.0**（命中目标决策，不误命中干扰项）
+- **常规抗干扰**：3 个 case（1 目标 + 1 相似干扰），F1 = 1.0
+- **硬核抗干扰**：100 条真实感群聊噪声 + 1 条目标决策共存于 Store，查询"为什么不用 PostgreSQL？"目标排名 **1/101**
 - 召回机制：alias `PostgreSQL` + negative_key `为什么不用 PostgreSQL`
+- **样本规模声明**：101 条记忆均为自建 case，目的是证明召回在量级对比下仍可靠，不代表真实线上噪声分布
 
 #### 矛盾更新测试
 
@@ -221,24 +241,25 @@ Reconcile 自动产生：
 
 历史决策复议场景中，Kairos 对比手工流程：
 
-| 指标 | 手工流程 | Kairos |
-|---|---:|---:|
-| 找到历史决策所需操作步数 | 约 7 步 | **约 2 步** |
-| 用户额外输入字符 | 约 42 字 | **0 字** |
-| 是否自动把上下文推回现场 | 否 | **是** |
+| 指标 | 手工流程 | Kairos | 改善 |
+|---|---:|---:|---:|
+| 操作步数 | 7 | 2 | **-71.4%** |
+| 耗时（中位数估算）| 39s | 3s | **-92.3%** |
+| 用户键盘输入字符 | 10 | 0 | **-100%** |
+| AI agent token 消耗 | ~1500 | ~200 | **-86.7%** |
 
-**操作步数降低 71.4%，额外输入降低 100%**。
+耗时与 token 基于动作分解估算，详细口径和边界披露见 [`docs/efficiency-measurement.md`](./efficiency-measurement.md)。
 
 #### Thread Linking 质量
 
-在同一批飞书消息上对比：
+在自建 3 条交错对话 silver set 上对比（不等同于人工 gold label）：
 
 | 方法 | 平均 F1 | 耗时 |
 |---|---:|---:|
 | heuristic（时间窗 + 显式 reply）| 0.524 | <100ms |
 | LLM thread linking | **1.000** | 3-8s/次 |
 
-收益：+47.6 个百分点。
+收益：+47.6 pp（在本 silver set 上）。
 
 ---
 
@@ -253,24 +274,32 @@ Reconcile 自动产生：
 - **启发式**：便宜、确定性、秒内完成。处理 80% 的"明显不需要记忆"场景（闲聊、确认语、斜杠命令）
 - **LLM**：只在 heuristic 信号不足但 salience 够高的候选窗口上调用。平均一次 cycle 只需 1-3 次 LLM 调用
 
-### 4.3 召回结构化而非向量检索
+### 4.3 结构化召回
 
-不依赖 embedding 服务。用：
+当前版本优先采用**结构化召回**：
+
 - `alias[]` 记录"同一事物的不同称呼"
 - `negative_keys[]` 记录"这个决策会被以什么形式的反向 query 触发"
 - `hasStrongDecisionCue` 门槛函数防止误激活
 
-好处：**可解释、可回归测试、无外部依赖、无 token 成本**。
+**为什么优先做结构化召回**：决策类记忆需要**可解释、可回归测试、可审计**。抽取阶段就把"这条决策会被哪些问法命中"写下来，评测失败时能精准定位问题。
+
+**后续可叠加的路径**：embedding / 向量检索可以作为二级候选召回层，兜住"query 措辞完全没见过"的场景，但不把最终判断完全交给向量相似度——因为决策更新、状态机、冲突识别这些业务语义，向量没法承担。
 
 ### 4.4 ActivationThrottle 频控
 
 同一 memory 在同一群的推送有冷却（默认 15 分钟），避免重复打扰。冷却记录 JSONL 持久化，Dashboard 可见。
 
-### 4.5 OpenClaw 原生接入
+### 4.5 OpenClaw 作为 Agent 宿主与部署控制面
 
-- `openclaw.setup.json` 描述完整安装流程
-- `hooks/` 目录下有 OpenClaw hook pack
-- Agent 宿主只需 `git clone` + `npm install` + `npm run build` + 授权 `lark-cli` 即可运行
+Kairos 在赛题语境里对 OpenClaw 的使用定位明确——**OpenClaw 不承担飞书消息接入**：
+
+- `openclaw.setup.json` 描述 Agent 安装与接入指引，让 OpenClaw agent 能一条链接接手部署
+- OpenClaw 负责：**拉取仓库、构建、配置 `.env`、运行 Dashboard / runtime / benchmark**
+- 飞书消息主接入路径为官方 **lark-cli Runtime**（`src/larkRuntime/worker.ts`）
+- `hooks/` 目录保留为 OpenClaw 事件接入的**可选扩展**，不是当前主 Demo 路径
+
+这样分工的好处：飞书数据链路依赖官方工具（稳定、权限清晰），OpenClaw 承担"运维 / 部署 / 运行环境"的控制面，二者职责不冲突。
 
 ### 4.6 白皮书 + Dashboard + Benchmark 三位一体可证明
 
@@ -321,12 +350,15 @@ Reconcile 自动产生：
 
 | 能力 | 当前状态 | 下一步 |
 |---|---|---|
-| LLM 决策抽取 | 主路径，4/4 LLM eval 通过 | 扩大评测集到 50+ case |
+| LLM 决策抽取 | 主路径，4/4 LLM eval 通过（自建小样本）| 扩大评测集到 50+ case，引入 LLM-as-judge 打分 |
+| 自建 benchmark / silver set 规模 | 累计 36 eval case + 3 thread silver + 4 LLM silver | 真实飞书群数据脱敏后补 50+ case |
+| 硬核抗干扰 100 条噪声 | 通过自建真实感噪声集，rank=1 | 后续换成真实飞书群历史脱敏数据 |
 | 飞书卡片按钮回传 | 卡片已推送，按钮静态 | 接 Feishu 事件回调服务，打通 RefineQueue |
 | Dashboard 实时推送 | meta-refresh 2s 刷新 | 升级 SSE |
 | 全局消息搜索 | 未接入（`search:message` scope 可选）| 主 demo 按 chat_id 读群，不阻塞 |
 | 记忆遗忘曲线 | `review_at` + 状态机 | Ebbinghaus 复习提醒 |
 | 多群路由 | 单群 `KAIROS_CHAT_ID` | 多 chat_id 并发监听 |
+| webhook 机器人角色信号 | 通过【角色】前缀约定承载 | 真实用户无此约束，走 `sender.name` |
 
 ---
 
