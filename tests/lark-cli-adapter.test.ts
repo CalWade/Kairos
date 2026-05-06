@@ -34,6 +34,14 @@ describe("lark-cli adapter", () => {
     expect(texts[0].id).toBe("user_1");
   });
 
+  it("保留 app 身份的纯文本消息（自定义机器人 webhook / 合法 bot）", () => {
+    const texts = extractTextsFromLarkCliJson({ data: { messages: [
+      { message_id: "bot_1", msg_type: "text", sender: { sender_type: "app", id: "cli_xxx" }, content: "最终决定：复赛阶段先用 SQLite。" },
+      { message_id: "cli_oauth_1", msg_type: "text", sender: { sender_type: "app" }, content: "请访问 https://accounts.feishu.cn/oauth/authorize?..." },
+    ] } });
+    expect(texts.map((t) => t.id)).toEqual(["bot_1"]);
+  });
+
   it("extractTextsFromLarkCliJson 从常见 lark-cli 输出中提取文本", () => {
     const texts = extractTextsFromLarkCliJson({
       data: {

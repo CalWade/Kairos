@@ -321,11 +321,11 @@ function pickText(record: Record<string, unknown>): string | undefined {
 }
 
 function isLarkCliNoiseRecord(record: Record<string, unknown>): boolean {
-  const sender = record.sender;
-  if (sender && typeof sender === "object" && (sender as Record<string, unknown>).sender_type === "app") return true;
   if (record.msg_type === "interactive" || record.msg_type === "post") return true;
   const raw = String(record.content ?? record.text ?? "").trim();
   if (raw.startsWith("<card>") || raw.includes("open.feishu.cn/page/cli") || raw.includes("accounts.feishu.cn/oauth")) return true;
+  // sender_type=="app" 本身不再作为过滤理由：自定义机器人 webhook、合法 bot 也是 app；
+  // 只有当 app 发的内容同时命中 lark-cli 登录卡片特征时，才作为噪声丢弃（前面 URL 黑名单已覆盖）。
   return false;
 }
 
