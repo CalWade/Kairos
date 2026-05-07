@@ -14,6 +14,7 @@
 - [ ] 撤回群里上次 demo 留下的消息（保留带【角色】前缀的那 6 条若还在也无所谓，runtime 会去重）
 - [ ] 终端字体放大到清晰可读（建议 16-18pt）
 - [ ] 分屏：左 2/3 飞书群 + 右 1/3 Dashboard + 底部小窗终端；或按自己习惯布局
+- [ ] 额外终端 tab 预敲好 `npm run demo:anti-interference`（镜头 3.4 用，回车即出结果）
 
 ## 镜头 1：问题定义（30s）
 
@@ -114,9 +115,37 @@ npm run demo:inject -- --script storage-decision
 
 > Kairos 的记忆有状态机。"周报发给 Alice" 被 "周报发给 Bob" 覆盖时，旧记忆不是删除，是标记 superseded，历史仍可追溯。同时 Reconcile 输出 DIRECT_CONFLICT 信号，让评审人员可以复查。
 
-### 3.4 可证明
+### 3.4 可证明（30 秒，含现场跑一条命令）
 
-> 不是让评委相信"我们系统很强"。Kairos 自带 8 套评测 / 103 个单测 / 36 个 benchmark case，全绿。在我们自建的 101 条记忆（100 条噪声 + 1 条目标）里，查询"为什么不用 PostgreSQL？" 目标排名第一。矛盾更新 4 种状态全通过，操作步数从 7 步降到 2 步。这些都是自建小样本 benchmark 的数字，具体口径和边界披露在 `docs/benchmark-report.md` §7，可以一键重跑。
+**画面**：切到一个干净终端
+
+**旁白**：
+
+> 不是让评委相信"我们系统很强"——所有数字当场可跑。Kairos 带 8 套评测、36 个 benchmark case、103 个单测，全绿。
+
+**命令**（现场敲或用预敲好的终端 tab）：
+
+```bash
+npm run demo:anti-interference
+```
+
+**画面**（0.5 秒内出结果）：
+
+```
+输入记忆候选数 : 101 条
+Step 1/3  规则抽取器过滤 101 条输入 ...
+          └─ 4 条 被抽取为 MemoryAtom 进入 Store
+          └─ 97 条 被规则抽取器识别为噪声直接丢弃
+Step 3/3  在 Store 内搜索 "为什么不用 PostgreSQL？" ...
+Top-5 召回结果：  #1 🎯 目标  decision  MVP 阶段使用 SQLite...
+✅ PASS  目标决策定位到 top-1
+```
+
+**旁白**（指屏幕讲）：
+
+> 看这里——输入 101 条记忆候选。其中 97 条噪声在抽取阶段就被规则 Extractor 丢弃，根本没进 Store；剩下 4 条 MemoryAtom 里，目标决策被精准定位到第一位。这是两阶段抗干扰：不是侥幸命中，是机制兜底。
+>
+> 矛盾更新 4 种状态全过、操作步数从 7 步降到 2 步，这些数字在 `docs/benchmark-report.md` §7 有完整样本披露，评委可以一键 `npm run eval:core` 自己验证。
 
 ## 镜头 4：技术深度闪一下（1 分钟）
 
