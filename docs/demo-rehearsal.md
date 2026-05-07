@@ -7,14 +7,20 @@
 
 - [ ] 录屏工具准备好（QuickTime / OBS / Xnip 都行）
 - [ ] 飞书客户端打开，目标群在前台
-- [ ] 清空 Kairos 数据，保证干净演示：
+- [ ] **一键重置录屏环境**（停旧进程、清 state、留备份）：
   ```bash
-  rm -f data/lark_runtime_state.json data/induction_queue.jsonl data/memory.jsonl data/memory_events.jsonl data/activation_throttle.jsonl
+  npm run demo:reset-recording
   ```
-- [ ] 撤回群里上次 demo 留下的消息（保留带【角色】前缀的那 6 条若还在也无所谓，runtime 会去重）
+- [ ] 撤回群里上轮 demo 留下的消息（保留带【角色】前缀的那 6 条无所谓，runtime 会去重）
 - [ ] 终端字体放大到清晰可读（建议 16-18pt）
 - [ ] 分屏：左 2/3 飞书群 + 右 1/3 Dashboard + 底部小窗终端；或按自己习惯布局
-- [ ] 额外终端 tab 预敲好 `npm run demo:anti-interference`（镜头 3.4 用，回车即出结果）
+- [ ] 开 4 个终端 tab，预敲好以下命令但**不回车**，录屏时依次触发：
+  - Tab A: `npm run dashboard`
+  - Tab B: `npm run lark-runtime`
+  - Tab C: `npm run demo:inject -- --script storage-decision`
+  - Tab D: `npm run demo:anti-interference`
+- [ ] 浏览器打开 `http://127.0.0.1:8787`（Dashboard）
+- [ ] 先把 Tab A、B 启动完成（Dashboard 看到页面，runtime 开始轮询），再开始录镜头 1
 
 ## 镜头 1：问题定义（30s）
 
@@ -48,26 +54,28 @@ npm run lark-runtime
 
 > Kairos 常驻读群，完全不依赖飞书 API 权限申请——走官方 lark-cli。Dashboard 是只读旁路，不向群里发任何调试消息。
 
-### 2.2 注入一场真实讨论（40s）
+### 2.2 注入一场真实讨论（40s，其中 ~12s 等消息发送）
 
 终端 C：
 ```bash
 npm run demo:inject -- --script storage-decision
 ```
 
-**旁白**（配合飞书群画面一条条消息弹出）：
+**旁白**（配合飞书群画面一条条消息弹出；剧本 6 条消息累计 pause 11.7s，建议后期剪成 20-25s 节奏）：
 
-> 我用三个不同身份的机器人模拟产品、工程A、工程B 的真实讨论。
-> 【产品】说复赛 demo 环境要尽量轻...
-> 【工程A】提出 PostgreSQL 会不会太重...
-> 【工程B】推荐 SQLite...
-> 【产品】最终拍板——复赛用 SQLite。
+> 我用 3 个不同身份的自定义机器人 webhook，模拟产品、工程A、工程B 在群里的真实讨论：
+>
+> - 【产品】提出复赛 demo 环境要尽量轻
+> - 【工程A】质疑 PostgreSQL 会不会太重
+> - 【工程B】推荐 SQLite + JSONL
+> - 【产品】拍板——复赛用 SQLite
+> - 【工程B】过一会又重提 PostgreSQL —— 这是复议触发点
 
-（等一两秒让最后的"要不我们还是用 PostgreSQL？"也发出去）
+（等第 6 条"要不我们还是用 PostgreSQL？"出现后**再等 15-25 秒**，让 runtime 完成一轮读取+抽取+激活）
 
 ### 2.3 Kairos 的反应（40s）
 
-**画面**：切到 Dashboard
+**画面**：第 6 条消息发完后**等 15-25 秒**（runtime 每 10s 轮询一次 + 一次 LLM 抽取耗时 ~7s），看群里新卡片出现后再切 Dashboard
 
 **旁白**（对着 Dashboard 不同区块讲）：
 
@@ -75,25 +83,27 @@ npm run demo:inject -- --script storage-decision
 >
 > - "飞书消息进入"区域显示刚才 6 条消息已经被 lark-cli 读取
 > - "会话解缠"说明 heuristic 已经把 6 条归成一个话题
-> - "长期记忆生成"显示刚刚产出的 MemoryAtom——类型 decision，主题数据库选型
-> - 再看"历史记忆激活"—— Kairos 检测到最后一条"要不我们还是用 PostgreSQL？"是在复议一个已经拍板的决策
+> - "长期记忆生成"显示刚刚产出的 MemoryAtom——类型 decision，主题"数据库选型：PostgreSQL vs SQLite"
+> - 再看"历史记忆激活"—— Kairos 检测到最后一条"要不我们还是用 PostgreSQL？"是在复议一个已经拍板的决策，命中历史 decision
 >
-> **整轮 17 秒，就这一次真实演示**。
+> **从消息进群到卡片推回群，单轮约 17 秒——这是实测数字，不是估算**。
 
 ### 2.4 决策卡片推回现场（30s）
 
-**画面**：切回飞书群，把刚收到的决策卡片滚到视野中心
+**画面**：切回飞书群，**找到 runtime 刚推的新卡片**（header "历史决策卡片：数据库选型：PostgreSQL vs SQLite"），滚到视野中心
+
+> ⚠️ 如果群里没看到新卡片：检查 runtime 终端 B 是否还在跑 + `npm run demo:anti-interference` 附近是否有 activation_throttle 冷却痕迹。兜底方案：手动再发一条触发 `npm run demo:inject -- --script storage-decision --start 6 --end 6`。
 
 **旁白**：
 
 > 看飞书群——Kairos 不是把历史藏在数据库里等人查，而是把决策卡片主动推回协作现场。
 >
 > - 当前有效、主题、阶段
-> - 决策结论
+> - 决策结论：复赛阶段用 SQLite
 > - 理由：评委要能一键跑、SQLite 更轻
 > - 被否方案：PostgreSQL，理由是部署成本高
-> - 完整证据摘录：真实四条讨论原文，发言人是产品 / 工程A / 工程B，而不是某个难懂的机器人 ID
-> - 确认有效 / 忽略 / 请求更新 三个反馈按钮
+> - 完整证据摘录：真实四条讨论原文，发言人是产品 / 工程A / 工程B，不是某个难懂的机器人 ID
+> - 三个反馈按钮：确认有效 / 忽略 / 请求更新（当前按钮展示，回传通路下一期接入）
 >
 > 这张卡片不需要任何人点开聊天记录去翻，团队决策能直接复用。
 
@@ -145,7 +155,7 @@ Top-5 召回结果：  #1 🎯 目标  decision  MVP 阶段使用 SQLite...
 
 > 看这里——输入 101 条记忆候选。其中 97 条噪声在抽取阶段就被规则 Extractor 丢弃，根本没进 Store；剩下 4 条 MemoryAtom 里，目标决策被精准定位到第一位。这是两阶段抗干扰：不是侥幸命中，是机制兜底。
 >
-> 矛盾更新 4 种状态全过、操作步数从 7 步降到 2 步，这些数字在 `docs/benchmark-report.md` §7 有完整样本披露，评委可以一键 `npm run eval:core` 自己验证。
+> 所有数字都在自建小样本 benchmark 里，评委可以一键 `npm run eval:core` 自己验证，样本性质和边界披露写在 `docs/benchmark-report.md` §7。
 
 ## 镜头 4：技术深度闪一下（1 分钟）
 
@@ -155,11 +165,11 @@ Top-5 召回结果：  #1 🎯 目标  decision  MVP 阶段使用 SQLite...
 
 > 简单说三个工程点：
 >
-> 1. **双阶段判断**：80% 的噪声由启发式秒级过滤掉，只有有显著性的候选窗口才调 LLM。
-> 2. **结构化抽取 prompt**：5 类 kind 边界 + 公共字段 + 专属字段，总共 861 字符系统 prompt，兼容 DeepSeek / OpenAI / 火山方舟多种 OpenAI-compatible endpoint。对 reasoning 模型还有 `thinking.disabled` 开关，延迟从 30-60 秒压到 3-5 秒。
-> 3. **完整可观测**：每轮 runtime / 每条 memory / 每次 activation 都有 JSONL 事件日志，Dashboard 实时聚合展示。
+> 1. **双阶段判断**：启发式（时间窗 + salience score + decision cue）先过滤大部分噪声，只有显著性够高的候选窗口才调 LLM。刚才那个 101 条里 97 条被规则过滤，就是这个机制。
+> 2. **结构化抽取 prompt**：5 类 kind 边界 + 公共字段 + 专属字段，系统 prompt 从 1500 字符优化到 861 字符（-43%），兼容任何 OpenAI-compatible endpoint。对 reasoning 模型有 `thinking.disabled` 开关，延迟能从 30-60 秒压到 3-5 秒。
+> 3. **完整可观测**：每轮 runtime / 每条 memory / 每次 activation / 每次频控判定都有独立 JSONL 事件日志，Dashboard 实时聚合展示。
 >
-> 总源码 7000 行 TypeScript，TypeScript strict 模式，103 测试全绿。一个人独立完成。
+> 总源码 7000 行 TypeScript，strict 模式，单元 + benchmark 共 139 测试全绿。一个人独立完成。
 
 ## 镜头 5：收尾（20s）
 

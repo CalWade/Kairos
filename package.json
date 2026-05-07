@@ -25,7 +25,8 @@
     "demo:reset-state": "bash scripts/reset-demo-state.sh",
     "demo:inject": "node scripts/demo-inject.mjs",
     "demo:inject:list": "node scripts/demo-inject.mjs --list",
-    "demo:anti-interference": "tsx scripts/demo-anti-interference.ts"
+    "demo:anti-interference": "tsx scripts/demo-anti-interference.ts",
+    "demo:reset-recording": "bash scripts/reset-for-recording.sh"
   },
   "keywords": [
     "memory",
